@@ -3,21 +3,7 @@
 use crate::{AddMulSub, Complex};
 use num::BigRational;
 
-/// Evaluator for the Mandelbrot fractal.
-///
-/// This trait allows evaluation and comparison of the Mandelbrot fractal
-/// to be dispatched dynamically.
-pub trait MandelbrotEval {
-    /// Provides a descriptive name for this evaluator, e.g. `float32` or `posit16`.
-    fn name(&self) -> &str;
 
-    fn eval_range(
-        iteration_limit: u32,
-        y: &BigRational,
-        input_x: &[BigRational],
-        output: &mut [Option<u32>],
-    );
-}
 
 /// Evaluate an X-range of the Mandelbrot fractal.
 ///

@@ -1,5 +1,5 @@
 //! Library code for Fractal Farlands.
 
-mod mandelbrot;
+pub mod mandelbrot;
 mod numeric;
 

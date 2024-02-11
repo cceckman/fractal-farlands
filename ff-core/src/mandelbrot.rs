@@ -1,9 +1,6 @@
 /// Implementation of the Mandelbrot fractal,
 /// parameterized on a numeric type.
-use crate::{AddMulSub, Complex};
-use num::BigRational;
-
-
+use crate::numeric::Complex;
 
 /// Evaluate an X-range of the Mandelbrot fractal.
 ///
@@ -13,44 +10,82 @@ use num::BigRational;
 ///
 /// The output buffer must be the same length as the list of X-coordinates.
 ///
-/// Both coordinates are provided as BigRational, and are therefore representing an exact (pixel)
-/// coordinate; the implementation of N may lose precision when converting these to their internal
-/// representation.
-fn eval_range<N>(
-    iteration_limit: u32,
-    y: &BigRational,
-    input_x: &[BigRational],
-    output: &mut [Option<u32>],
-) where
-    N: MandelbrotNumber + crate::ApproximateFromBigRational,
-{
-    let y = N::approximate(y);
-    for (x, out) in input_x.iter().zip(output.iter_mut()) {
-        let x = N::approximate(x);
-        *out = mandelbrot(iteration_limit, x, y.clone());
-    }
-}
-
-/// Type constraint for use in the Mandelbrot fractal.
-trait MandelbrotNumber: AddMulSub + PartialOrd + Clone {
-    /// Returns the value representing zero in this form.
-    fn zero() -> Self;
-
-    /// Returns the value representing four in this form.
-    fn four() -> Self;
-}
-
-impl<N> MandelbrotNumber for N
+fn eval_range<N>(iteration_limit: u32, y: &N, input_x: &[N], output: &mut [Option<u32>])
 where
-    N: AddMulSub + From<i8> + PartialOrd + Clone,
+    N: MandelbrotNumber + Clone,
 {
-    fn zero() -> Self {
-        0.into()
-    }
-    fn four() -> Self {
-        4.into()
+    for (x, out) in input_x.iter().zip(output.iter_mut()) {
+        *out = mandelbrot(iteration_limit, x, y);
     }
 }
+
+mod mandelbrot_number {
+    //! Trait bounds on the numbers that can be used for the Mandelbrot computation.
+    //
+    // Use the hack from https://github.com/rust-lang/rfcs/pull/1672#issuecomment-1405377983
+    // to implement disjoint auto traits:
+    //
+    // - A default impl for everything that implements From<i8>
+    // - A non-default impl for everything else
+
+    use num::BigInt;
+
+    use crate::numeric::AddMulSub;
+    /// Type constraint for use in the Mandelbrot fractal.
+    pub trait MandelbrotNumber: AddMulSub + PartialOrd + Clone {
+        /// Returns the value representing zero in this type.
+        fn zero() -> Self;
+
+        /// Returns the value representing four in this type.
+        fn four() -> Self;
+    }
+
+    impl<T, K> MandelbrotNumber for T
+    where
+        T: MandelbrotNumberHelper<K>,
+    {
+        fn zero() -> Self {
+            <T as MandelbrotNumberHelper<K>>::zero()
+        }
+
+        fn four() -> Self {
+            <T as MandelbrotNumberHelper<K>>::four()
+        }
+    }
+
+    /// Helper to implement MandelbrotNumber: disjoint by virtue of getting different T parameters.
+    trait MandelbrotNumberHelper<T> {
+        fn zero() -> Self;
+        fn four() -> Self;
+    }
+
+    impl<N> MandelbrotNumberHelper<N> for N
+    where
+        N: From<i8>,
+    {
+        fn zero() -> Self {
+            0.into()
+        }
+        fn four() -> Self {
+            4.into()
+        }
+    }
+
+    impl<N, M> MandelbrotNumberHelper<N> for N
+    where
+        M: From<i8>,
+        N: From<M>,
+    {
+        fn zero() -> Self {
+            0.into().into()
+        }
+        fn four() -> Self {
+            4.into().into()
+        }
+    }
+}
+
+use mandelbrot_number::MandelbrotNumber;
 
 /// Sample a coordinate in the Mandelbrot fractal.
 ///
@@ -64,11 +99,14 @@ where
 /// The return value indicates if `z` tends towards infinity;
 /// specifically, it indicates the number of iterations after which
 /// $|z| >= 2$.
-fn mandelbrot<N>(limit: u32, x: N, y: N) -> Option<u32>
+fn mandelbrot<N>(limit: u32, x: &N, y: &N) -> Option<u32>
 where
     N: MandelbrotNumber,
 {
-    let c: Complex<N> = Complex { re: x, im: y };
+    let c: Complex<N> = Complex {
+        re: x.clone(),
+        im: y.clone(),
+    };
     let mut z: Complex<N> = Complex {
         re: N::zero(),
         im: N::zero(),
@@ -96,8 +134,8 @@ mod tests {
     where
         N: MandelbrotNumber,
     {
-        assert_eq!(mandelbrot::<N>(5, N::zero(), N::zero()), None);
-        mandelbrot::<N>(5, N::four(), N::zero()).unwrap();
+        assert_eq!(mandelbrot::<N>(5, &N::zero(), &N::zero()), None);
+        mandelbrot::<N>(5, &N::four(), &N::zero()).unwrap();
     }
 
     #[test]
@@ -114,6 +152,12 @@ mod tests {
     #[allow(non_snake_case)]
     fn test_P32() {
         tests::<softposit::P32>();
+    }
+
+    #[test]
+    #[allow(non_snake_case)]
+    fn test_BigRational() {
+        tests::<num::BigRational>();
     }
 
     // Our implementation above relies on from<i8>, so we need at least

@@ -59,3 +59,8 @@ For a large number of iterations - sure.
 
 
 
+# Just making it work
+
+Here's a problem: all the types implement `From<i8>`... except for `BigRatio`, which implements `From<From<i8>>`. (That's not the real signature, but it's the equivalent).
+
+I don't think there's a way to express "Follow the `into` chain"?

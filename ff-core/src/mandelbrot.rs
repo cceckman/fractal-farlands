@@ -2,7 +2,7 @@ use std::{any::type_name, ops::Range};
 
 /// Implementation of the Mandelbrot fractal,
 /// parameterized on a numeric type.
-use crate::numeric::Complex;
+use crate::{numeric::Complex, Size};
 
 mod number;
 use num::BigRational;
@@ -21,7 +21,7 @@ pub trait Mandelbrot {
     fn name(&self) -> &str;
 
     /// Returns the (x,y) dimensions of this evaluator.
-    fn size(&self) -> (usize, usize);
+    fn size(&self) -> Size;
 
     /// Returns the number of iterations passed so far.
     fn num_iters(&self) -> usize;
@@ -42,7 +42,7 @@ pub struct MandelbrotEval<N> {
     name: String,
 
     /// For debug/display: the size of this evaluator.
-    size: (usize, usize),
+    size: Size,
 
     /// Number of iterations completed.
     iterations: usize,
@@ -63,13 +63,12 @@ where
     pub fn new(
         x_bounds: &Range<BigRational>,
         y_bounds: &Range<BigRational>,
-        size: (usize, usize),
+        size: Size,
     ) -> Result<Self, String> {
-        let (xsize, ysize) = size;
-        let x = Self::make_coords(x_bounds, xsize)?;
-        let y = Self::make_coords(y_bounds, ysize)?;
+        let x = Self::make_coords(x_bounds, size.x)?;
+        let y = Self::make_coords(y_bounds, size.y)?;
 
-        let mut state = Vec::with_capacity(xsize * ysize);
+        let mut state = Vec::with_capacity(size.x * size.y);
 
         // Order cells in row-major order, as is typical for graphics.
         for y in y.into_iter() {
@@ -122,7 +121,7 @@ where
         &self.name
     }
 
-    fn size(&self) -> (usize, usize) {
+    fn size(&self) -> Size {
         self.size
     }
 

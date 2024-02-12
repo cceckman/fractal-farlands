@@ -9,4 +9,5 @@ edition = "2021"
 num = "0.4.1"
 softposit = "0.4.0"
 fixed = "1.24.0"
+image = { version = "0.24.8", default-features = false, features = ["bmp", "dds", "png", "tiff"] }
 

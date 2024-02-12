@@ -1,6 +1,5 @@
 use std::ops::{Add, Div, Mul, Sub};
 
-use fixed::traits::Fixed;
 use num::{BigRational, ToPrimitive};
 
 /// A numeric type that can can be used for the Mandelbrot fractal.

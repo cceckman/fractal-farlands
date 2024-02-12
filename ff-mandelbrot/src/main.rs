@@ -1,7 +1,10 @@
-use bmp_rust::bmp::BMP;
 use clap::Parser;
-use colors_transform::{Color, Hsl};
-use ff_core::mandelbrot::Mandelbrot;
+use ff_core::image::Renderer;
+use ff_core::mandelbrot::{Mandelbrot, MandelbrotEval};
+use ff_core::Size;
+use num::BigRational;
+use std::io::stderr;
+use std::io::Write;
 use std::{
     path::{Path, PathBuf},
     sync::Barrier,
@@ -9,115 +12,136 @@ use std::{
 
 #[derive(Debug, Parser)]
 struct Args {
+    #[arg(long)]
     x_start: num::BigRational,
+    #[arg(long)]
     x_end: num::BigRational,
+    #[arg(long)]
     y_start: num::BigRational,
+    #[arg(long)]
     y_end: num::BigRational,
 
+    #[arg(long)]
     width: usize,
+    #[arg(long)]
     height: usize,
 
-    iters: Vec<usize>,
-
+    #[arg(long)]
     out_dir: PathBuf,
+
+    #[arg(long, use_value_delimiter = true, value_delimiter = ',')]
+    iterations: Vec<usize>,
 }
 
 struct WorkerArgs<'a> {
-    evaluator: Box<dyn Mandelbrot>,
+    evaluator: Box<dyn Mandelbrot + Send>,
 
     // Concurrency control:
     // Consume one iteration, then wait on the barrier before continuing.
     // This might be slower, but it's "nice" to step in time.
-    iters: &'a [usize],
+    iterations: &'a [usize],
     barrier: &'a Barrier,
 
-    outpath: &'a Path,
+    out_dir: &'a Path,
 }
 
 impl WorkerArgs<'_> {
     pub fn run(mut self) {
-        for iter in self.iters {
+        for iter in self.iterations {
             self.advance_eval_to(*iter);
             let bmp = self.render();
-            self.write_image(bmp);
+            self.write_image(bmp).unwrap();
             self.barrier.wait();
         }
     }
 
     fn advance_eval_to(&mut self, iters: usize) {
         let count = self.evaluator.num_iters();
-        let remaining = count.saturating_sub(iters);
+        let remaining = iters.saturating_sub(count);
         self.evaluator.advance(remaining);
     }
 
-    fn render(&self) -> BMP {
-        let inputs = self.evaluator.state();
-        let (min, max) =
-            inputs
-                .iter()
-                .fold((self.evaluator.num_iters(), 0), |(min, max), v| match v {
-                    None => (min, max),
-                    Some(iters) => (std::cmp::min(min, *iters), std::cmp::max(max, *iters)),
-                });
-        let (min, max): (f32, f32) = (min as f32, max as f32);
-        let range = max - min;
-        // TODO: Don't need to inclue a new dep for this, BMP has it
-        // Map to colors:
-        let pixels: Vec<_> = inputs
-            .into_iter()
-            .map(|v| match v {
-                None => Hsl::from(0.0, 0.0, 0.0),
-                Some(v) => {
-                    let iters = v as f32;
-                    let degrees = ((iters - min) * 360.0) / range;
-
-                    Hsl::from(degrees, 100.0, 50.0)
-                }
-            })
-            .map(|hsl| {
-                let (r, g, b) = hsl.to_rgb().as_tuple();
-                (r as u8, g as u8, b as u8)
-            })
-            .collect();
-
-        let (xsize, ysize) = self.evaluator.size();
-        let xcoords = (0..xsize).cycle().take(xsize * ysize);
-        let ycoords = (0..ysize).map(|v| std::iter::repeat(v).take(xsize)).flatten();
-        let coords = ycoords.zip(xcoords);
-        let coords_and_values = coords.zip(pixels);
-
-        let mut image = BMP::new(ysize as i32, xsize as u32, None);
-
-        for cv in coords_and_values {
-            let ((x, y), (r, g, b)) = cv;
-            // TODO: Use "efficient" variants
-            image.change_color_of_pixel(x as u16, y as u16, [r, g, b, 0]).expect("failed to write pixel")
-        }
-
-        image
+    fn render(&self) -> image::DynamicImage {
+        let r = Renderer::default();
+        r.render(self.evaluator.size(), self.evaluator.state())
+            .expect("could not render image")
     }
 
-    fn write_image(&self, bmp: BMP) {
+    fn write_image(&self, img: image::DynamicImage) -> Result<(), String> {
+        // TODO: Convert to a lossless format; Firefox doesn't want to display TIFFs.
         let filename = format!(
-            "{}_{}.bmp",
+            "{}_{}.png",
             self.evaluator.name(),
             self.evaluator.num_iters()
         );
-        let path = self.outpath.join(filename);
-        bmp.save_to_new(&path.to_string_lossy()).expect("failed to write output file")
+        let path = self.out_dir.join(filename);
+        img.save(&path)
+            .map_err(|err| format!("failed to save image to {}: {}", path.display(), err))?;
+
+        writeln!(stderr().lock(), "wrote {}", path.display())
+            .map_err(|err| format!("stderr error: {}", err))
     }
 }
 
 fn main() {
     let args = Args::parse();
+    let x_bounds = args.x_start..args.x_end;
+    let y_bounds = args.y_start..args.y_end;
+    let size = Size {
+        x: args.width,
+        y: args.height,
+    };
+
+    // 4 threads: 3 workers, and this one for logging and completion.
+    let barrier = Barrier::new(4);
 
     std::thread::scope(|scope| {
-        let x_bounds = args.x_start..args.x_end;
-        let y_bounds = args.y_start..args.y_end;
+        let evals: Vec<Box<dyn Mandelbrot + Send>> = vec![
+            Box::new(MandelbrotEval::<f32>::new(&x_bounds, &y_bounds, size).unwrap()),
+            Box::new(MandelbrotEval::<f64>::new(&x_bounds, &y_bounds, size).unwrap()),
+            Box::new(MandelbrotEval::<BigRational>::new(&x_bounds, &y_bounds, size).unwrap()),
+        ];
+        let scopes: Vec<_> = evals
+            .into_iter()
+            .map(|evaluator| {
+                let worker = WorkerArgs {
+                    evaluator,
+                    iterations: &args.iterations,
+                    barrier: &barrier,
 
-        // 4 threads: 3 workers, and this one for logging and completion.
-        let b = Barrier::new(4);
+                    out_dir: &args.out_dir,
+                };
+                scope.spawn(move || {
+                    let worker = worker;
+                    worker.run()
+                })
+            })
+            .collect();
 
+        // Great! We've launched all the worker threads.
+        // Step through along with them...
+        (|| {
+            let mut out = stderr().lock();
+            writeln!(out, "Evaluating range:")?;
+            writeln!(out, " x: [{}, {}]", x_bounds.start, x_bounds.end)?;
+            writeln!(out, " y: [{}, {}]", y_bounds.start, y_bounds.end)?;
+            writeln!(out, "size: {} x {}", size.x, size.y)
+        })()
+        .unwrap();
+        for iterations in args.iterations.iter() {
+            writeln!(
+                stderr().lock(),
+                "Running through {} iterations in {} formats",
+                iterations,
+                scopes.len()
+            )
+            .unwrap();
+            barrier.wait();
+        }
+
+        // All threads are done.
         // TODO: Create evaluators, spawn workers, wait for them to be done.
     });
+
+    writeln!(stderr(), "Outputs in {}", args.out_dir.display()).unwrap();
 }

@@ -1,4 +1,4 @@
 [workspace]
 resolver = "2"
 
-members = ["ff-core", "ff-mandelbrot"]
+members = ["ff-core", "ff-mandelbrot", "ff-web"]

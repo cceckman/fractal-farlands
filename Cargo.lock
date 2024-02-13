@@ -203,6 +203,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "ff-web"
+version = "0.1.0"
+
+[[package]]
 name = "fixed"
 version = "1.25.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

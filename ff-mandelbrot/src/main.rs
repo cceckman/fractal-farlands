@@ -2,7 +2,6 @@ use clap::Parser;
 use ff_core::image::Renderer;
 use ff_core::mandelbrot::{Mandelbrot, MandelbrotEval};
 use ff_core::Size;
-use num::BigRational;
 use std::io::stderr;
 use std::io::Write;
 use std::{
@@ -92,15 +91,16 @@ fn main() {
         y: args.height,
     };
 
-    // 4 threads: 3 workers, and this one for logging and completion.
-    let barrier = Barrier::new(4);
+    let evals: Vec<Box<dyn Mandelbrot + Send>> = vec![
+        Box::new(MandelbrotEval::<f32>::new(&x_bounds, &y_bounds, size).unwrap()),
+        Box::new(MandelbrotEval::<f64>::new(&x_bounds, &y_bounds, size).unwrap()),
+        // Box::new(MandelbrotEval::<BigRational>::new(&x_bounds, &y_bounds, size).unwrap()),
+    ];
+
+    // 4 threads: workers, and this one for logging and completion.
+    let barrier = Barrier::new(evals.len() + 1);
 
     std::thread::scope(|scope| {
-        let evals: Vec<Box<dyn Mandelbrot + Send>> = vec![
-            Box::new(MandelbrotEval::<f32>::new(&x_bounds, &y_bounds, size).unwrap()),
-            Box::new(MandelbrotEval::<f64>::new(&x_bounds, &y_bounds, size).unwrap()),
-            Box::new(MandelbrotEval::<BigRational>::new(&x_bounds, &y_bounds, size).unwrap()),
-        ];
         let scopes: Vec<_> = evals
             .into_iter()
             .map(|evaluator| {

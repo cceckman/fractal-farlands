@@ -1,6 +1,8 @@
-use std::ops::{Add, Div, Mul, Sub};
+use std::ops::{Add, Mul};
 
 use num::{BigRational, ToPrimitive};
+
+use crate::numeric::Complex;
 
 /// A numeric type that can can be used for the Mandelbrot fractal.
 ///
@@ -9,14 +11,11 @@ use num::{BigRational, ToPrimitive};
 /// - Addition, subtraction, multiplication - to implement complex numbers and the Mandelbrot image
 /// - Constants zero and four - for initializing the image (zero) and bounds-checking (four)
 /// - Comparison - for bounds-checking
-pub trait MandelbrotNumber:
-    Sized
-    + Add<Self, Output = Self>
-    + Sub<Self, Output = Self>
-    + Mul<Self, Output = Self>
-    + Div<Self, Output = Self>
-    + Clone
-    + PartialOrd<Self>
+pub trait MandelbrotNumber
+where
+    Self: Sized + Clone + PartialOrd<Self>,
+    for<'a> &'a Complex<Self>: Add<&'a Complex<Self>, Output = Complex<Self>>
+        + Mul<&'a Complex<Self>, Output = Complex<Self>>,
 {
     // Provides this type's representation of zero.
     fn zero() -> Self;

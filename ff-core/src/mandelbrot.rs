@@ -1,4 +1,7 @@
-use std::{any::type_name, ops::Range};
+use std::{
+    any::type_name,
+    ops::{Add, Mul, Range, Sub},
+};
 
 /// Implementation of the Mandelbrot fractal,
 /// parameterized on a numeric type.
@@ -9,11 +12,11 @@ use num::BigRational;
 pub use number::MandelbrotNumber;
 
 /// Type-erased, state-preserving Mandelbrot evaluator.
-/// 
+///
 /// A Mandelbrot represents a "current state" of the Mandelbrot fractal over a given coordinate window,
 /// at a particular number of iterations.
 /// It can be advanced without losing that state.
-/// 
+///
 /// It returns its state as a vector of escapes: at which iteration each coordinate's value escaped past
 /// the existing bounds.
 pub trait Mandelbrot {
@@ -51,10 +54,9 @@ pub struct MandelbrotEval<N> {
     state: Vec<MandelbrotCell<N>>,
 }
 
-
-
 impl<N> MandelbrotEval<N>
 where
+    for<'a> &'a N: Add<&'a N, Output = N> + Sub<&'a N, Output = N> + Mul<&'a N, Output = N>,
     N: MandelbrotNumber,
 {
     /// Construct a new evaluator for the given type.
@@ -115,6 +117,7 @@ where
 
 impl<N> Mandelbrot for MandelbrotEval<N>
 where
+    for<'a> &'a N: Add<&'a N, Output = N> + Sub<&'a N, Output = N> + Mul<&'a N, Output = N>,
     N: MandelbrotNumber,
 {
     fn name(&self) -> &str {
@@ -165,6 +168,7 @@ enum TraceState<N> {
 
 impl<N> MandelbrotCell<N>
 where
+    for<'a> &'a N: Add<&'a N, Output = N> + Sub<&'a N, Output = N> + Mul<&'a N, Output = N>,
     N: MandelbrotNumber,
 {
     /// Construct a new MandelbrotCell at the given coordinate.
@@ -189,8 +193,8 @@ where
         let four: N = N::four();
 
         for i in 0..iters_more {
-            *z = z.clone() * z.clone() + self.coordinate.clone();
-            let z_magnitude_squared = z.re.clone() * z.re.clone() + z.im.clone() * z.im.clone();
+            *z = &(&*z * &*z) + &self.coordinate;
+            let z_magnitude_squared = &(&z.re * &z.re) + &(&z.im * &z.im);
 
             // The Mandelbrot "escape condition" is that the Cartesian distance from the zero point
             // of the complex plane (0 + 0i) is at least two.

@@ -5,6 +5,8 @@
 ///
 /// All dynamic paths take query parameters:
 /// - res: Integer width & height in pixels. (Rendering is always square.)
+/// - iter: Maximum number of iterations.
+/// 
 /// - window: Numerator for window width/height. Defaults to 4.
 /// - x: Numerator of X offset of upper-left corner. Defaults to -2.
 /// - y: Numerator of Y offset of upper-left corner. Defaults to -2.
@@ -19,18 +21,23 @@
 use axum::{routing::get, Router};
 use num_bigint::BigInt;
 use serde::de::{Deserialize, Deserializer};
-use std::str::FromStr;
 
 mod interface;
+mod static_content;
 
 pub fn root_routes(_web_rt: tokio::runtime::Handle) -> axum::Router {
-    Router::new().route("/", get(interface::interface))
+    Router::new()
+    .route("/", get(interface::interface))
+    .route("/static/:file", get(static_content::get))
 }
 
 #[derive(serde::Deserialize,Debug)]
 struct WindowParams {
     #[serde(default="WindowParams::default_res")]
     res: usize,
+    #[serde(default="WindowParams::default_iters")]
+    iters: usize,
+
     #[serde(default="WindowParams::default_window",deserialize_with="parse_bigint")]
     window: BigInt,
     #[serde(default="WindowParams::default_coord",deserialize_with="parse_bigint")]
@@ -49,9 +56,16 @@ where D: Deserializer<'de> {
 }
 
 impl WindowParams {
+    const fn is_true() -> bool {
+        true
+    }
     fn default_res() -> usize {
         512
     }
+    fn default_iters() -> usize {
+        512
+    }
+
     fn default_window() -> BigInt {
         4.into()
     }

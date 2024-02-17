@@ -7,4 +7,6 @@ edition = "2021"
 
 [dependencies]
 axum = { version = "0.7.4", features = ["http1", "query", "tokio", "tower-log", "tracing", "http2"], default-features = false }
+num-bigint = { version = "0.4.4", features = ["serde"] }
+serde = { version = "1.0.196", features = ["derive"] }
 tokio = { version = "1", features = ["full"] }

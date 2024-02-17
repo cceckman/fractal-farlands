@@ -8,6 +8,20 @@ mod number;
 use num::BigRational;
 pub use number::MandelbrotNumber;
 
+/// All-in-one routine for evaluating a portion of the Mandelbrot fractal.
+pub fn evaluate<N>(
+    x_bounds: &Range<BigRational>,
+    y_bounds: &Range<BigRational>,
+    size: Size,
+    iterations: usize,
+) -> Result<Vec<Option<usize>>, String> where N: MandelbrotNumber {
+    let mut eval = MandelbrotEval::<N>::new(x_bounds, y_bounds, size)?;
+    // TODO: incremental evaluation; check for cancellation.
+    eval.advance(iterations);
+    Ok(eval.state())
+}
+
+
 /// Type-erased, state-preserving Mandelbrot evaluator.
 /// 
 /// A Mandelbrot represents a "current state" of the Mandelbrot fractal over a given coordinate window,

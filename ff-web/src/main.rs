@@ -1,6 +1,9 @@
 use ff_web::root_routes;
+use pretty_env_logger;
 
 fn main() {
+    pretty_env_logger::init();
+
     let web_rt = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()

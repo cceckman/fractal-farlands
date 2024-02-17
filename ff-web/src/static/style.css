@@ -1,0 +1,8 @@
+body {
+    /* Just to show that we're loading it */
+    font-family: monospace;
+}
+
+.render-pane {
+    display: inline-block;
+}

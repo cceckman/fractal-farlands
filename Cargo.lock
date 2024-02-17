@@ -316,6 +316,8 @@ name = "ff-web"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "num-bigint",
+ "serde",
  "tokio",
 ]
 
@@ -649,6 +651,7 @@ dependencies = [
  "autocfg",
  "num-integer",
  "num-traits",
+ "serde",
 ]
 
 [[package]]

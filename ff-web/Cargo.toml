@@ -6,8 +6,14 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-axum = { version = "0.7.4", features = ["http1", "query", "tokio", "tower-log", "tracing", "http2"], default-features = false }
+axum = { version = "0.7.4", features = ["http1", "query", "tokio", "tower-log", "tracing", "http2", "original-uri"], default-features = false }
+bytes = "1.5.0"
+ff-core = { version = "0.1.0", path = "../ff-core" }
+image = { version = "0.24.8", default-features = false, features = ["bmp", "dds", "png", "tiff"] }
+log = "0.4.20"
 maud = { version = "0.26.0", features = ["axum"] }
+num = "0.4.1"
 num-bigint = { version = "0.4.4", features = ["serde"] }
+pretty_env_logger = "0.5.0"
 serde = { version = "1.0.196", features = ["derive"] }
 tokio = { version = "1", features = ["full"] }

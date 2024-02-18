@@ -103,7 +103,7 @@ impl WindowParams {
         4.into()
     }
     fn default_coord() -> BigInt {
-        (-2).into()
+        0.into()
     }
     fn default_scale() -> BigInt {
         1.into()

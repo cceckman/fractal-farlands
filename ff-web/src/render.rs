@@ -5,6 +5,7 @@ use axum::{
 };
 use ff_core::mandelbrot;
 use num::BigRational;
+use num_bigint::BigInt;
 
 /// Render the fractal with the provided params.
 pub async fn render(
@@ -22,12 +23,19 @@ fn mandelbrot_render(
     numeric: &str,
     query: WindowParams,
 ) -> axum::response::Result<impl IntoResponse> {
-    let x_end = &query.x + &query.window;
-    let y_end = &query.y + &query.window;
-    let x_range = BigRational::new(query.x.clone(), query.scale.clone())
-        ..BigRational::new(x_end, query.scale.clone());
-    let y_range = BigRational::new(query.y.clone(), query.scale.clone())
-        ..BigRational::new(y_end, query.scale.clone());
+    let step = &query.window / 2;
+
+    let range = |center :&BigInt| {
+        BigRational::new(
+            center - &step,
+            query.scale.clone()
+        )..BigRational::new(
+            center + &step,
+            query.scale.clone()
+        )
+    };
+    let x_range = range(&query.x);
+    let y_range = range(&query.y);
 
     let size = ff_core::Size {
         x: query.res,

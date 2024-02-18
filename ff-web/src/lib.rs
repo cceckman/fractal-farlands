@@ -30,20 +30,21 @@ mod interface;
 mod render;
 mod static_content;
 
-pub fn root_routes(_web_rt: tokio::runtime::Handle) -> axum::Router {
+pub fn root_routes(web_rt: tokio::runtime::Handle) -> axum::Router {
+    tracing::info!("constructing router");
     Router::new()
-        .route(
-            "/",
-            get(interface::interface),
-        )
+        .route("/", get(interface::interface))
         .route(
             "/render/:fractal/:numeric",
-            get(
+            get({
+                let runtime = web_rt.clone();
                 |Path((fractal, numeric)): Path<(String, String)>,
-                 Query(window_params): Query<WindowParams>| {
-                    render::render(fractal, numeric, window_params)
-                },
-            ),
+                 Query(window_params): Query<WindowParams>| async move {
+                    let future =
+                        runtime.spawn_blocking(|| render::render(fractal, numeric, window_params));
+                    future.await.expect("failed to join rendering thread")
+                }
+            }),
         )
         .route("/static/:file", get(static_content::get))
 }

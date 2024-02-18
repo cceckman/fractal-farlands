@@ -67,7 +67,6 @@ impl WorkerArgs<'_> {
     }
 
     fn write_image(&self, img: image::DynamicImage) -> Result<(), String> {
-        // TODO: Convert to a lossless format; Firefox doesn't want to display TIFFs.
         let filename = format!(
             "{}_{}.png",
             self.evaluator.name(),

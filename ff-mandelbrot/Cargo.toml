@@ -6,9 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bmp-rust = "0.4.1"
 clap = { version = "4.5.0", features = ["derive"] }
 colors-transform = "0.2.11"
 ff-core = {path = "../ff-core"}
-image = { version = "0.24.8", default-features = false, features = ["bmp", "dds", "png", "tiff"] }
+image = { version = "0.24.8", default-features = false, features = ["png"] }
 num = "0.4.1"

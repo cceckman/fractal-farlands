@@ -18,18 +18,18 @@ pub async fn interface(uri: OriginalUri, Query(query): Query<WindowParams>) -> M
 
 fn interface_body(query_str: &str, query: &WindowParams) -> Markup {
     html! {
-        form action="/" autocomplete="off" {
+        form action="/" autocomplete="off" class="parameters" {
             h2 { "Target area" }
             p {
-                label { "X (numerator):" }
+                label { "Center X (numerator):" }
                 input name="x" type="number" value=(query.x);
                 " "
 
-                label { "Y (numerator):" }
+                label { "Center Y (numerator):" }
                 input name="y" type="number" value=(query.y);
                 " "
 
-                label { "Window (numerator)" }
+                label { "Window size (numerator)" }
                 input name="window" type="number" value=(query.window);
                 " "
 
@@ -49,7 +49,7 @@ fn interface_body(query_str: &str, query: &WindowParams) -> Markup {
                 input name="res" type="number" value=(query.res);
                 " "
 
-                label { "Iterations:" }
+                label { "Max iterations:" }
                 input name="iters" type="number" value=(query.iters);
                 " "
                 br;
@@ -73,7 +73,7 @@ fn render(query_str: &str, fractal: &str, numeric: &str, size: usize) -> Markup 
     html! {
         div class="render-pane" {
             h3 { (numeric) }
-            img src=(format!("/render/{}/{}?{}", fractal, numeric, query_str)) width=(size) height=(size);
+            img src=(format!("/render/{}/{}?{}", fractal, numeric, query_str)) width=(size) height=(size) class="renderpane";
         }
     }
 }

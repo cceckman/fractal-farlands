@@ -1,7 +1,7 @@
 use axum::http::Request;
 use ff_web::root_routes;
 use tower_http::trace::TraceLayer;
-use tracing_subscriber::{layer::SubscriberExt,util::SubscriberInitExt};
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 fn main() {
     let web_rt = tokio::runtime::Builder::new_multi_thread()
@@ -16,10 +16,11 @@ fn main() {
             tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
                 // axum logs rejections from built-in extractors with the `axum::rejection`
                 // target, at `TRACE` level. `axum::rejection=trace` enables showing those events
-                "ff-web=debug,ff_web=debug,tower_http=debug,axum::rejection=trace".into()
+                "debug,axum::rejection=trace".into()
             }),
         )
-        .with(tracing_subscriber::fmt::layer())
+        .with(tracing_subscriber::fmt::layer()
+    )
         .init();
 
     let trace = TraceLayer::new_for_http().make_span_with(|request: &Request<_>| {

@@ -5,4 +5,5 @@ body {
 
 .render-pane {
     display: inline-block;
+    margin: 1em;
 }

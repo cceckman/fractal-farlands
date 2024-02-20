@@ -16,7 +16,6 @@ pub fn render(
     numeric: String,
     query: WindowParams,
 ) -> axum::response::Result<impl IntoResponse> {
-    tracing::info!("starting fractal {} with format {}", fractal, numeric);
     match fractal.as_str() {
         "mandelbrot" => mandelbrot_render(&numeric, query),
         _ => Err(axum::http::StatusCode::NOT_FOUND.into()),
@@ -27,6 +26,7 @@ fn mandelbrot_render(
     numeric: &str,
     query: WindowParams,
 ) -> axum::response::Result<impl IntoResponse> {
+    tracing::info!("starting mandelbrot with format {}", numeric);
     let step = &query.window / 2;
 
     let range = |center: &BigInt| {
@@ -41,31 +41,25 @@ fn mandelbrot_render(
         y: query.res,
     };
 
-    let computed = {
-        let span = tracing::info_span!("computation for mandelbrot {}", numeric);
-        let _guard = span.enter();
-
-        match numeric {
-            "f32" => mandelbrot::evaluate::<f32>(&x_range, &y_range, size, query.iters),
-            "f64" => mandelbrot::evaluate::<f32>(&x_range, &y_range, size, query.iters),
-            _ => return Err(axum::http::StatusCode::NOT_FOUND.into()),
-        }
+    let span = tracing::info_span!("render-mandelbrot", numeric);
+    let _guard = span.enter();
+    let computed = match numeric {
+        "f32" => mandelbrot::evaluate::<f32>(&x_range, &y_range, size, query.iters),
+        "f64" => mandelbrot::evaluate::<f32>(&x_range, &y_range, size, query.iters),
+        _ => return Err(axum::http::StatusCode::NOT_FOUND.into()),
     };
+    tracing::debug!("mandelbrot-computed");
     let data: Vec<Option<usize>> = computed.map_err(|err| {
         tracing::error!("computation error: for parameters {:?}: {}", &query, err);
         axum::http::StatusCode::INTERNAL_SERVER_ERROR
     })?;
-    let image = {
-        let span = tracing::info_span!("rasterizing for mandelbrot {}", numeric);
-        let _guard = span.enter();
-
-        ff_core::image::Renderer {}
-            .render(size, data)
-            .map_err(|err| {
-                tracing::error!("rendering error: for parameters {:?}: {}", &query, err);
-                axum::http::StatusCode::INTERNAL_SERVER_ERROR
-            })
-    }?;
+    let image = ff_core::image::Renderer {}
+        .render(size, data)
+        .map_err(|err| {
+            tracing::error!("rendering error: for parameters {:?}: {}", &query, err);
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+    tracing::debug!("mandelbrot-rendered");
 
     let mut buffer = std::io::Cursor::new(Vec::<u8>::new());
     image

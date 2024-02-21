@@ -45,7 +45,7 @@ fn mandelbrot_render(
     let _guard = span.enter();
     let computed = match numeric {
         "f32" => mandelbrot::evaluate::<f32>(&x_range, &y_range, size, query.iters),
-        "f64" => mandelbrot::evaluate::<f32>(&x_range, &y_range, size, query.iters),
+        "f64" => mandelbrot::evaluate::<f64>(&x_range, &y_range, size, query.iters),
         _ => return Err(axum::http::StatusCode::NOT_FOUND.into()),
     };
     tracing::debug!("mandelbrot-computed");

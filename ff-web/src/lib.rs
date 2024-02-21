@@ -49,7 +49,7 @@ pub fn root_routes(web_rt: tokio::runtime::Handle) -> axum::Router {
         .route("/static/:file", get(static_content::get))
 }
 
-#[derive(serde::Deserialize, Debug)]
+#[derive(serde::Deserialize, Debug,Clone)]
 struct WindowParams {
     #[serde(default = "WindowParams::default_res")]
     res: usize,
@@ -97,7 +97,7 @@ impl WindowParams {
         512
     }
     fn default_iters() -> usize {
-        512
+        16
     }
 
     fn default_window() -> BigInt {

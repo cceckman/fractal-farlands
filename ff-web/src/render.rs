@@ -6,7 +6,7 @@ use axum::{
     },
     response::IntoResponse,
 };
-use ff_core::mandelbrot;
+use ff_core::{mandelbrot, masked_float};
 use num::BigRational;
 use num_bigint::BigInt;
 
@@ -46,6 +46,8 @@ fn mandelbrot_render(
     let computed = match numeric {
         "f32" => mandelbrot::evaluate::<f32>(&x_range, &y_range, size, query.iters),
         "f64" => mandelbrot::evaluate::<f64>(&x_range, &y_range, size, query.iters),
+        "MaskedFloat<3,50>" => mandelbrot::evaluate::<masked_float::MaskedFloat<3,50>>(&x_range, &y_range, size, query.iters),
+        "MaskedFloat<4,50>" => mandelbrot::evaluate::<masked_float::MaskedFloat<4,50>>(&x_range, &y_range, size, query.iters),
         _ => return Err(axum::http::StatusCode::NOT_FOUND.into()),
     };
     tracing::debug!("mandelbrot-computed");

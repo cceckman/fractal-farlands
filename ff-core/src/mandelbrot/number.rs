@@ -2,6 +2,8 @@ use std::ops::{Add, Div, Mul, Sub};
 
 use num::{BigRational, ToPrimitive};
 
+use crate::masked_float::MaskedFloat;
+
 /// A numeric type that can can be used for the Mandelbrot fractal.
 ///
 /// This trait identifies the necessary operations to compute a Mandelbrot image:
@@ -68,6 +70,18 @@ impl MandelbrotNumber for BigRational {
     }
     fn from_bigrational(value: &BigRational) -> Option<Self> {
         Some(value.to_owned())
+    }
+}
+
+impl<const E: usize, const F: usize> MandelbrotNumber for MaskedFloat<E, F> {
+    fn zero() -> Self {
+        MaskedFloat::<E, F>::new(0.0)
+    }
+    fn four() -> Self {
+        MaskedFloat::<E, F>::new(4.0)
+    }
+    fn from_bigrational(value: &BigRational) -> Option<Self> {
+        Some(MaskedFloat::<E, F>::new(value.to_f64()?))
     }
 }
 

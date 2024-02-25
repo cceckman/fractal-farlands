@@ -14,20 +14,22 @@ pub fn evaluate<N>(
     y_bounds: &Range<BigRational>,
     size: Size,
     iterations: usize,
-) -> Result<Vec<Option<usize>>, String> where N: MandelbrotNumber {
+) -> Result<Vec<Option<usize>>, String>
+where
+    N: MandelbrotNumber,
+{
     let mut eval = MandelbrotEval::<N>::new(x_bounds, y_bounds, size)?;
     // TODO: incremental evaluation; check for cancellation.
     eval.advance(iterations);
     Ok(eval.state())
 }
 
-
 /// Type-erased, state-preserving Mandelbrot evaluator.
-/// 
+///
 /// A Mandelbrot represents a "current state" of the Mandelbrot fractal over a given coordinate window,
 /// at a particular number of iterations.
 /// It can be advanced without losing that state.
-/// 
+///
 /// It returns its state as a vector of escapes: at which iteration each coordinate's value escaped past
 /// the existing bounds.
 pub trait Mandelbrot {
@@ -64,8 +66,6 @@ pub struct MandelbrotEval<N> {
     /// State: coordinate-and-trace pair, at the corresponding number of iterations.
     state: Vec<MandelbrotCell<N>>,
 }
-
-
 
 impl<N> MandelbrotEval<N>
 where

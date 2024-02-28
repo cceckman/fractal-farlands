@@ -160,4 +160,14 @@ mod tests {
         let ok = MaskedFloat::<8, 50>::new(f);
         assert!(ok.to_f64() - f < 0.001);
     }
+
+    #[test]
+    fn test_f16() {
+        // Implement binary16 (half precision):
+        type F16 = MaskedFloat::<4,10>;
+        let too_small = F16::new(65_504.0);
+        let reasonable = F16::new(34_496.0);
+        let result = too_small + reasonable;
+        assert_eq!(result.to_f64(), 100_000.0);
+    }
 }

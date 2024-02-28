@@ -56,6 +56,22 @@ pub struct MaskedFloat<const E: usize, const M: usize> {
 
 impl<const E: usize, const F: usize> MaskedFloat<E, F> {
     pub fn new(val: f64) -> Self {
+        val.into()
+    }
+
+    pub fn to_f64(self) -> f64 {
+        self.val
+    }
+}
+
+impl<const E: usize, const F: usize> From<MaskedFloat<E, F>> for f64 {
+    fn from(masked: MaskedFloat<E, F>) -> Self {
+        masked.val
+    }
+}
+
+impl<const E: usize, const F: usize> From<f64> for MaskedFloat<E, F> {
+    fn from(val: f64) -> Self {
         let bits = val.to_bits();
         let sign = bits & (SIGN_MASK | EXPONENT_SIGN_MASK);
         let exp = if bits & EXPONENT_SIGN_MASK != 0 {
@@ -78,18 +94,13 @@ impl<const E: usize, const F: usize> MaskedFloat<E, F> {
         }
     }
 
-    pub fn to_f64(&self) -> f64 {
-        self.val
-    }
 }
 
 impl<const E: usize, const F: usize> std::ops::Add for MaskedFloat<E, F> {
     type Output = Self;
 
     fn add(self, other: Self) -> Self {
-        Self {
-            val: self.val + other.val,
-        }
+        (self.val + other.val).into()
     }
 }
 
@@ -97,9 +108,7 @@ impl<const E: usize, const F: usize> std::ops::Sub for MaskedFloat<E, F> {
     type Output = Self;
 
     fn sub(self, other: Self) -> Self {
-        Self {
-            val: self.val - other.val,
-        }
+        (self.val - other.val).into()
     }
 }
 
@@ -107,9 +116,7 @@ impl<const E: usize, const F: usize> std::ops::Mul for MaskedFloat<E, F> {
     type Output = Self;
 
     fn mul(self, other: Self) -> Self {
-        Self {
-            val: self.val * other.val,
-        }
+        (self.val * other.val).into()
     }
 }
 
@@ -117,9 +124,7 @@ impl<const E: usize, const F: usize> std::ops::Div for MaskedFloat<E, F> {
     type Output = Self;
 
     fn div(self, other: Self) -> Self {
-        Self {
-            val: self.val / other.val,
-        }
+        (self.val / other.val).into()
     }
 }
 

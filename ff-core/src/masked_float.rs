@@ -184,9 +184,9 @@ mod tests {
 
     #[test]
     fn test_mandelbrot_iteration() {
-        // For some reason, small negative values seem to get disorted differently
+        // Originally, small negative values seemed to get disorted differently
         // than small positive values when doing the Mandelbrot set computation.
-        // Just test it here.
+        // Regression-test here.
         type T = MaskedFloat<3, 50>;
         let cx = T::new(-1.5);
         let cy = T::new(0.0001);

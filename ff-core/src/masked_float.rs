@@ -78,14 +78,21 @@ impl<const E: usize, const F: usize> From<f64> for MaskedFloat<E, F> {
             if bits & EXPONENT_MASKS[E] != 0 {
                 ((1 << E + FRACTION) - 1) & EXPONENT_MASK
             } else {
-                (bits & !EXPONENT_MASKS[E]) & EXPONENT_MASK
+                bits & EXPONENT_MASK
             }
         } else {
             // bits & EXPONENT_SIGN_MASK == 0
+            // Special case for zero:
+            if bits & !SIGN_MASK == 0 {
+                return Self {
+                    val: f64::from_bits(bits & SIGN_MASK),
+                };
+            }
+
             if bits & EXPONENT_MASKS[E] != EXPONENT_MASKS[E] {
                 EXPONENT_MASKS[E]
             } else {
-                (bits | EXPONENT_MASKS[E]) & EXPONENT_MASK
+                bits & EXPONENT_MASK
             }
         };
         let frac = bits & FRACTION_MASKS[F];
@@ -93,7 +100,6 @@ impl<const E: usize, const F: usize> From<f64> for MaskedFloat<E, F> {
             val: f64::from_bits(sign | exp | frac),
         }
     }
-
 }
 
 impl<const E: usize, const F: usize> std::ops::Add for MaskedFloat<E, F> {
@@ -169,10 +175,53 @@ mod tests {
     #[test]
     fn test_f16() {
         // Implement binary16 (half precision):
-        type F16 = MaskedFloat::<4,10>;
+        type F16 = MaskedFloat<4, 10>;
         let too_small = F16::new(65_504.0);
         let reasonable = F16::new(34_496.0);
         let result = too_small + reasonable;
         assert_eq!(result.to_f64(), 100_000.0);
+    }
+
+    #[test]
+    fn test_mandelbrot_iteration() {
+        // Originally, small negative values seemed to get disorted differently
+        // than small positive values when doing the Mandelbrot set computation.
+        // Regression-test here.
+        type T = MaskedFloat<3, 50>;
+        let cx = T::new(-1.5);
+        let cy = T::new(0.0001);
+
+        let mut z_pos = (cx, T::new(0.0001));
+        let mut z_neg = (cx, T::new(-0.0001));
+
+        for i in 1..50 {
+            // Zi+1 = Zi ^ 2 + C
+
+            // Real component
+            let rep = z_pos.0 * z_pos.0 - z_pos.1 * z_pos.1 + cx;
+            let ren = z_neg.0 * z_neg.0 - z_neg.1 * z_neg.1 + cx;
+
+            // Imaginary component
+            let imp = z_pos.0 * z_pos.1 + z_pos.0 * z_pos.1 + cy;
+            let imn = z_neg.0 * z_neg.1 + z_neg.0 * z_neg.1 - cy;
+
+            z_pos = (rep, imp);
+            z_neg = (ren, imn);
+
+            assert_eq!(z_pos.0.to_f64(), z_neg.0.to_f64());
+            assert_eq!(z_pos.1.to_f64(), -z_neg.1.to_f64());
+
+            println!("{} {:?}", i, z_pos);
+            println!("{} {:?}", i, z_neg);
+            println!("--");
+        }
+    }
+
+    #[test]
+    fn test_zero() {
+        type T = MaskedFloat<3, 50>;
+
+        assert_eq!(T::new(0.0).to_f64().to_bits(), 0.0f64.to_bits());
+        assert_eq!(T::new(-0.0).to_f64().to_bits(), (-0.0f64).to_bits());
     }
 }

@@ -19,6 +19,7 @@ pub trait MandelbrotNumber:
     + Div<Self, Output = Self>
     + Clone
     + PartialOrd<Self>
+    + std::fmt::Debug
 {
     // Provides this type's representation of zero.
     fn zero() -> Self;
@@ -91,3 +92,27 @@ impl<const E: usize, const F: usize> MandelbrotNumber for MaskedFloat<E, F> {
 // For the purposes of Mandelbrot, it is sufficient to saturate at 4 (|z| >= 2).
 
 // TODO: implement for posits. How?
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use num::BigInt;
+
+    #[test]
+    fn test_masked_float_small() {
+        // Define small positive and negative BigRational values
+        let center: BigInt = 0.into();
+        let scale: BigInt = 5000.into();
+        let small_positive = BigRational::new(center.clone() + 1, scale.clone());
+        let small_negative = BigRational::new(center.clone() - 1, scale.clone());
+
+        // Create MaskedFloat<3, 50> instances from those values
+        let positive_mf: MaskedFloat<3, 50> =
+            MandelbrotNumber::from_bigrational(&small_positive).unwrap();
+        let negative_mf: MaskedFloat<3, 50> =
+            MandelbrotNumber::from_bigrational(&small_negative).unwrap();
+
+        // Assert that they are negations of each other
+        assert_eq!(positive_mf.to_f64(), -negative_mf.to_f64());
+    }
+}

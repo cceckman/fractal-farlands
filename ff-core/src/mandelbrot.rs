@@ -2,7 +2,7 @@ use std::{any::type_name, ops::Range};
 
 /// Implementation of the Mandelbrot fractal,
 /// parameterized on a numeric type.
-use crate::{numeric::Complex, Size};
+use crate::{numeric::Complex, CommonParams, Size};
 
 mod number;
 use num::BigRational;
@@ -10,15 +10,13 @@ pub use number::MandelbrotNumber;
 
 /// All-in-one routine for evaluating a portion of the Mandelbrot fractal.
 pub fn evaluate<N>(
-    x_bounds: &Range<BigRational>,
-    y_bounds: &Range<BigRational>,
-    size: Size,
+    params: &CommonParams,
     iterations: usize,
 ) -> Result<Vec<Option<usize>>, String>
 where
     N: MandelbrotNumber,
 {
-    let mut eval = MandelbrotEval::<N>::new(x_bounds, y_bounds, size)?;
+    let mut eval = MandelbrotEval::<N>::new(&params.x, &params.y, params.size)?;
     // TODO: incremental evaluation; check for cancellation.
     eval.advance(iterations);
     Ok(eval.state())
@@ -79,10 +77,10 @@ where
         y_bounds: &Range<BigRational>,
         size: Size,
     ) -> Result<Self, String> {
-        let x = Self::make_coords(x_bounds, size.x)?;
-        let y = Self::make_coords(y_bounds, size.y)?;
+        let x = Self::make_coords(x_bounds, size.width)?;
+        let y = Self::make_coords(y_bounds, size.height)?;
 
-        let mut state = Vec::with_capacity(size.x * size.y);
+        let mut state = Vec::with_capacity(size.width * size.height);
 
         // Order cells in row-major order, as is typical for graphics.
         for y in y.into_iter() {

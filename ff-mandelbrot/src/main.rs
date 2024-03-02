@@ -86,8 +86,8 @@ fn main() {
     let x_bounds = args.x_start..args.x_end;
     let y_bounds = args.y_start..args.y_end;
     let size = Size {
-        x: args.width,
-        y: args.height,
+        width: args.width,
+        height: args.height,
     };
 
     let evals: Vec<Box<dyn Mandelbrot + Send>> = vec![
@@ -124,7 +124,7 @@ fn main() {
             writeln!(out, "Evaluating range:")?;
             writeln!(out, " x: [{}, {}]", x_bounds.start, x_bounds.end)?;
             writeln!(out, " y: [{}, {}]", y_bounds.start, y_bounds.end)?;
-            writeln!(out, "size: {} x {}", size.x, size.y)
+            writeln!(out, "size: {} x {}", size.width, size.height)
         })()
         .unwrap();
         for iterations in args.iterations.iter() {

@@ -14,12 +14,12 @@ impl Renderer {
         size: Size,
         data: Vec<Option<usize>>,
     ) -> Result<image::DynamicImage, String> {
-        if data.len() != (size.x * size.y) {
+        if data.len() != (size.width * size.height) {
             return Err(format!(
                 "error: data size != width * height: {} != {} * {}",
                 data.len(),
-                size.x,
-                size.y
+                size.width,
+                size.height
             ));
         }
 
@@ -36,7 +36,7 @@ impl Renderer {
             Some(v) => value_to_rgb(min, max, v),
         });
 
-        let mut img = image::ImageBuffer::<image::Rgb<u8>, _>::new(size.x as u32, size.y as u32);
+        let mut img = image::ImageBuffer::<image::Rgb<u8>, _>::new(size.width as u32, size.height as u32);
         img.pixels_mut()
             .zip(pixel_values)
             .for_each(|(pixel, value)| {

@@ -23,6 +23,8 @@ use axum::{
     routing::get,
     Router,
 };
+use ff_core::{CommonParams, FractalParams, RenderRequest, Size};
+use num::BigRational;
 use num_bigint::BigInt;
 use serde::de::{Deserialize, Deserializer};
 
@@ -40,8 +42,9 @@ pub fn root_routes(web_rt: tokio::runtime::Handle) -> axum::Router {
                 let runtime = web_rt.clone();
                 |Path((fractal, numeric)): Path<(String, String)>,
                  Query(window_params): Query<WindowParams>| async move {
+                    let request = window_params.to_request(fractal, numeric)?;
                     let future =
-                        runtime.spawn_blocking(|| render::render(fractal, numeric, window_params));
+                        runtime.spawn_blocking(|| render::render(request));
                     future.await.expect("failed to join rendering thread")
                 }
             }),
@@ -78,6 +81,36 @@ struct WindowParams {
         deserialize_with = "parse_bigint"
     )]
     scale: BigInt,
+}
+
+impl WindowParams {
+    fn to_request(self, fractal: String, numeric: String) -> Result<RenderRequest, String> {
+        let range = |v: BigInt| {
+            let start = BigRational::new(v.clone(), self.scale.clone());
+            let end = BigRational::new(v + &self.window, self.scale.clone());
+            start..end
+        };
+
+        let common = CommonParams{
+            size: Size {
+                width: self.res,
+                height: self.res,
+            },
+            x: range(self.x),
+            y: range(self.y),
+            numeric,
+        };
+        let fractal = match fractal.as_str() {
+            "mandelbrot" => Ok(FractalParams::Mandelbrot{
+                iters: self.iters,
+            }),
+            v => Err(format!("unknown fractal '{}'", v)),
+        }?;
+        Ok(RenderRequest{
+            common, fractal
+        })
+        
+    }
 }
 
 /// Converter to parse BigInt via string.

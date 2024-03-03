@@ -1,0 +1,14 @@
+[package]
+name = "ff-render"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rayon = "1.9.0"
+ff-core = {path = "../ff-core"}
+tracing = "0.1.40"
+image = { version = "0.24.9", features = ["png"], default-features = false }
+fixed = "1.25.1"
+

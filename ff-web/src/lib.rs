@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 /// HTTP serving for Fractal Farlands.
 ///
 /// The library implements routing, state, etc. for an FF server;
@@ -32,27 +34,23 @@ mod interface;
 mod render;
 mod static_content;
 
-pub fn root_routes(web_rt: tokio::runtime::Handle) -> axum::Router {
+pub fn root_routes() -> Result<axum::Router, String> {
     tracing::info!("constructing router");
-    Router::new()
+    let render_server = ff_render::RenderServer::new()?;
+    Ok(Router::new()
         .route("/", get(interface::interface))
-        .route(
-            "/render/:fractal/:numeric",
-            get({
-                let runtime = web_rt.clone();
-                |Path((fractal, numeric)): Path<(String, String)>,
-                 Query(window_params): Query<WindowParams>| async move {
-                    let request = window_params.to_request(fractal, numeric)?;
-                    let future =
-                        runtime.spawn_blocking(|| render::render(request));
-                    future.await.expect("failed to join rendering thread")
-                }
-            }),
-        )
-        .route("/static/:file", get(static_content::get))
+        .route("/render/:fractal/:numeric", get({
+            let srv = Arc::new(render_server);
+            |Path((fractal, numeric)): Path<(String, String)>,
+            Query(window_params): Query<WindowParams>| async move {
+                let request = window_params.to_request(fractal, numeric)?;
+                render::render(&srv, request).await
+            }
+        }))
+        .route("/static/:file", get(static_content::get)))
 }
 
-#[derive(serde::Deserialize, Debug,Clone)]
+#[derive(serde::Deserialize, Debug, Clone)]
 struct WindowParams {
     #[serde(default = "WindowParams::default_res")]
     res: usize,
@@ -89,14 +87,13 @@ impl WindowParams {
         // Compute the window.
         let half_range = self.window / 2;
 
-
         let range = |v: &BigInt| {
             let start = BigRational::new(v - &half_range, self.scale.clone());
             let end = BigRational::new(v + &half_range, self.scale.clone());
             start..end
         };
 
-        let common = CommonParams{
+        let common = CommonParams {
             size: Size {
                 width: self.res,
                 height: self.res,
@@ -106,15 +103,10 @@ impl WindowParams {
             numeric,
         };
         let fractal = match fractal.as_str() {
-            "mandelbrot" => Ok(FractalParams::Mandelbrot{
-                iters: self.iters,
-            }),
+            "mandelbrot" => Ok(FractalParams::Mandelbrot { iters: self.iters }),
             v => Err(format!("unknown fractal '{}'", v)),
         }?;
-        Ok(RenderRequest{
-            common, fractal
-        })
-        
+        Ok(RenderRequest { common, fractal })
     }
 }
 

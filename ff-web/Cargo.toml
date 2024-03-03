@@ -9,6 +9,7 @@ edition = "2021"
 axum = { version = "0.7.4", features = ["http1", "query", "tokio", "tower-log", "tracing", "http2", "original-uri"], default-features = false }
 bytes = "1.5.0"
 ff-core = { version = "0.1.0", path = "../ff-core" }
+ff-render = { version = "0.1.0", path = "../ff-render" }
 fixed = "1.25.1"
 image = { version = "0.24.8", default-features = false, features = ["png"] }
 maud = { version = "0.26.0", features = ["axum"] }

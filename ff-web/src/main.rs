@@ -8,7 +8,6 @@ fn main() {
         .enable_all()
         .build()
         .expect("could not construct Tokio runtime");
-    let handle = web_rt.handle().clone();
 
     // Tracing config, from the Axum example:
     tracing_subscriber::registry()
@@ -34,7 +33,7 @@ fn main() {
     });
 
     let server = async move {
-        let app = root_routes(handle).layer(trace);
+        let app = root_routes().expect("failed to start rendering pool").layer(trace);
         const ADDR : &str = "0.0.0.0:3000";
         let listener = tokio::net::TcpListener::bind(ADDR).await?;
         tracing::info!("listening at {:?}", ADDR);

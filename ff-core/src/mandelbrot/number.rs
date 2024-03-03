@@ -2,7 +2,7 @@ use std::ops::{Add, Div, Mul, Sub};
 
 use num::{BigRational, ToPrimitive};
 
-use crate::masked_float::MaskedFloat;
+use crate::{masked_float::MaskedFloat, numeric::FromRational};
 
 /// A numeric type that can can be used for the Mandelbrot fractal.
 ///
@@ -19,6 +19,7 @@ pub trait MandelbrotNumber:
     + Div<Self, Output = Self>
     + Clone
     + PartialOrd<Self>
+    + FromRational
     + std::fmt::Debug
 {
     // Provides this type's representation of zero.
@@ -26,12 +27,6 @@ pub trait MandelbrotNumber:
 
     // Provides this type's representation of four.
     fn four() -> Self;
-
-    /// Converts from BigRational.
-    ///
-    /// This is provided as a distinct method because we can't expect `From<BigRational>`
-    /// on foreign types.
-    fn from_bigrational(value: &BigRational) -> Option<Self>;
 }
 
 impl MandelbrotNumber for f32 {
@@ -41,10 +36,6 @@ impl MandelbrotNumber for f32 {
 
     fn four() -> Self {
         4f32
-    }
-
-    fn from_bigrational(value: &BigRational) -> Option<Self> {
-        value.to_f32()
     }
 }
 
@@ -56,10 +47,6 @@ impl MandelbrotNumber for f64 {
     fn four() -> Self {
         4f64
     }
-
-    fn from_bigrational(value: &BigRational) -> Option<Self> {
-        value.to_f64()
-    }
 }
 
 impl MandelbrotNumber for BigRational {
@@ -69,9 +56,6 @@ impl MandelbrotNumber for BigRational {
     fn four() -> Self {
         BigRational::new(4.into(), 1.into())
     }
-    fn from_bigrational(value: &BigRational) -> Option<Self> {
-        Some(value.to_owned())
-    }
 }
 
 impl<const E: usize, const F: usize> MandelbrotNumber for MaskedFloat<E, F> {
@@ -80,9 +64,6 @@ impl<const E: usize, const F: usize> MandelbrotNumber for MaskedFloat<E, F> {
     }
     fn four() -> Self {
         MaskedFloat::<E, F>::new(4.0)
-    }
-    fn from_bigrational(value: &BigRational) -> Option<Self> {
-        Some(MaskedFloat::<E, F>::new(value.to_f64()?))
     }
 }
 
@@ -108,9 +89,9 @@ mod tests {
 
         // Create MaskedFloat<3, 50> instances from those values
         let positive_mf: MaskedFloat<3, 50> =
-            MandelbrotNumber::from_bigrational(&small_positive).unwrap();
+            FromRational::from_bigrational(&small_positive).unwrap();
         let negative_mf: MaskedFloat<3, 50> =
-            MandelbrotNumber::from_bigrational(&small_negative).unwrap();
+            FromRational::from_bigrational(&small_negative).unwrap();
 
         // Assert that they are negations of each other
         assert_eq!(positive_mf.to_f64(), -negative_mf.to_f64());

@@ -1,5 +1,42 @@
 use std::ops::{Add, Mul, Sub};
 
+use num::{BigRational, ToPrimitive};
+
+use crate::masked_float::MaskedFloat;
+
+/// A numeric type that can be converted from a BigRational.
+///
+/// This is provided as a distinct trait because we can't expect `From<BigRational>`
+/// on foreign types.
+pub trait FromRational {
+    fn from_bigrational(r: &BigRational) -> Result<Self, String> where Self: Sized;
+}
+
+impl FromRational for f32 {
+    fn from_bigrational(r: &BigRational) -> Result<Self, String> where Self: Sized {
+        r.to_f32().ok_or(format!("failed conversion from {}", r))
+    }
+}
+
+impl FromRational for f64 {
+    fn from_bigrational(r: &BigRational) -> Result<Self, String> where Self: Sized {
+        r.to_f64().ok_or(format!("failed conversion from {}", r))
+    }
+}
+
+impl<const E: usize, const F: usize> FromRational for MaskedFloat<E, F> {
+    fn from_bigrational(value: &BigRational) -> Result<Self, String> {
+        let f : f64 = f64::from_bigrational(value)?;
+        Ok(MaskedFloat::<E, F>::new(f))
+    }
+}
+
+impl FromRational for BigRational {
+    fn from_bigrational(value: &BigRational) -> Result<Self, String> {
+        Ok(value.clone())
+    }
+}
+
 /// Complex number implementation.
 /// A little more granular than num_traits, because we're only interested in certain ops.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]

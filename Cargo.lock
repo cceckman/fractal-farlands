@@ -326,6 +326,7 @@ dependencies = [
  "axum",
  "bytes",
  "ff-core",
+ "fixed",
  "image",
  "maud",
  "num",

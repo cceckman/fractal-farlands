@@ -95,6 +95,9 @@ fn interface_body(query_str: &str, query: &WindowParams) -> Markup {
             (render(query_str, &query.fractal, "f64", query.res))
             (render(query_str, &query.fractal, "MaskedFloat<3,50>", query.res))
             (render(query_str, &query.fractal, "MaskedFloat<4,50>", query.res))
+            (render(query_str, &query.fractal, "I11F5", query.res))
+            (render(query_str, &query.fractal, "I13F3", query.res))
+            (render(query_str, &query.fractal, "I15F1", query.res))
         }
 
     }

@@ -10,10 +10,10 @@
 
 use std::{
     future::Future,
-    sync::mpsc::Receiver,
+    sync::{mpsc::Receiver, Arc},
 };
 
-use ff_core::{mandelbrot, masked_float, RenderRequest};
+use ff_core::RenderRequest;
 mod oneshot;
 
 pub struct RenderServer {
@@ -73,26 +73,33 @@ impl RenderServer {
 }
 
 fn dispatch(pool: rayon::ThreadPool, receiver: Receiver<ImageRequest>) {
+    let pool = Arc::new(pool);
     let span = tracing::info_span!("dispatch thread");
     let _ = span.enter();
 
     for req in receiver.iter() {
         // spawn_fifo so that images complete in ~the same order as requested;
         // we don't want partially-rendered images.
-        pool.spawn_fifo(|| render(req));
+        pool.spawn_fifo({
+            let pool = pool.clone();
+            || render(pool, req)
+        })
     }
 }
 
-fn render(req: ImageRequest) {
+fn render(pool: Arc<rayon::ThreadPool>, req: ImageRequest) {
     let ImageRequest { request, result } = req;
     let res = match request.fractal {
-        ff_core::FractalParams::Mandelbrot { iters } => mandelbrot_render(request.common, iters),
+        ff_core::FractalParams::Mandelbrot { iters } => {
+            mandelbrot_render(&pool, request.common, iters)
+        }
         _ => Err(Error::InvalidArgument("unknown fractal".to_owned())),
     };
     result.send(res);
 }
 
 fn mandelbrot_render(
+    pool: &rayon::ThreadPool,
     request: ff_core::CommonParams,
     iters: usize,
 ) -> Result<image::DynamicImage, Error> {
@@ -100,34 +107,16 @@ fn mandelbrot_render(
 
     let span = tracing::info_span!("render-mandelbrot");
     let _guard = span.enter();
-    let computed = match request.numeric.as_str() {
-        "f32" => mandelbrot::evaluate::<f32>(&request, iters),
-        "f64" => mandelbrot::evaluate::<f64>(&request, iters),
-        "MaskedFloat<3,50>" => {
-            mandelbrot::evaluate::<masked_float::MaskedFloat<3, 50>>(&request, iters)
-        }
-        "MaskedFloat<4,50>" => {
-            mandelbrot::evaluate::<masked_float::MaskedFloat<4, 50>>(&request, iters)
-        }
-        "I11F5" => mandelbrot::evaluate::<fixed::types::I11F5>(&request, iters),
-        "I13F3" => mandelbrot::evaluate::<fixed::types::I13F3>(&request, iters),
-        "I15F1" => mandelbrot::evaluate::<fixed::types::I15F1>(&request, iters),
-        _ => {
-            return Err(Error::InvalidArgument(format!(
-                "unknown numeric format {}",
-                request.numeric.as_str()
-            )))
-        }
-    };
+    let size = request.size.clone();
+
+    let output = ff_core::mandelbrot::evaluate_parallel(pool, &request, iters)
+        .map_err(|msg| Error::Internal(msg))?;
     tracing::debug!("mandelbrot-computed");
-    let data: Vec<Option<usize>> = computed.map_err(|err| {
-        tracing::error!("computation error: for parameters {:?}: {}", &request, err);
-        Error::Internal(format!("computation error: {}", err))
-    })?;
+
     let image = ff_core::image::Renderer {}
-        .render(request.size, data)
+        .render(size, output)
         .map_err(|err| {
-            tracing::error!("rendering error: for parameters {:?}: {}", &request, err);
+            tracing::error!("rendering error: {}", err);
             Error::Internal(format!("rendering error: {}", err))
         })?;
     tracing::debug!("mandelbrot-rendered");

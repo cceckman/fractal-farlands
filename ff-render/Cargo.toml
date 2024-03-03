@@ -11,6 +11,7 @@ ff-core = {path = "../ff-core"}
 tracing = "0.1.40"
 image = { version = "0.24.9", features = ["png"], default-features = false }
 fixed = "1.25.1"
+num = "0.4.1"
 
 [dev-dependencies]
 criterion = { version = "0.3", features = ["async_tokio", "html_reports"] }

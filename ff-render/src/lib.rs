@@ -10,7 +10,7 @@
 
 use std::{
     future::Future,
-    sync::{mpsc::Receiver, Arc},
+    sync::mpsc::Receiver,
 };
 
 use ff_core::{mandelbrot, masked_float, RenderRequest};

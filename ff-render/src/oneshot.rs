@@ -3,7 +3,7 @@
 //! New implementation to avoid pulling in all of tokio or similar implementations.
 
 use std::{
-    future::{Future},
+    future::Future,
     sync::{Arc, Condvar, Mutex},
     task::{Poll, Waker},
 };
@@ -33,7 +33,7 @@ pub struct Sender<T> {
 impl<T> Sender<T> {
     /// Returns true if the receiver has hung up.
     pub fn is_cancelled(&self) -> bool {
-        let mut g = match self.shared.state.lock() {
+        let g = match self.shared.state.lock() {
             Err(_) => return true,
             Ok(v) => v,
         };

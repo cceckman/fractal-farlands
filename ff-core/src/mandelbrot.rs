@@ -111,13 +111,7 @@ where
         let mut coord = bounds.start.clone();
         let mut results = Vec::with_capacity(size);
         for _ in 0..size {
-            let value = N::from_bigrational(&coord).ok_or_else(|| {
-                format!(
-                    "cannot approximate coordinate {} as a {}",
-                    &coord,
-                    std::any::type_name::<N>()
-                )
-            })?;
+            let value = N::from_bigrational(&coord)?;
             results.push(value);
             coord += step.clone();
         }

@@ -8,6 +8,8 @@ pub mod mandelbrot;
 pub mod masked_float;
 mod numeric;
 
+pub use numeric::FromRational;
+
 
 /// Rendering-request parameters, common across renderables.
 #[derive(Debug)]

@@ -1,4 +1,4 @@
-use std::{any::type_name, ops::Range};
+use std::{any::type_name, ops::{Mul, Range}};
 
 /// Implementation of the Mandelbrot fractal,
 /// parameterized on a numeric type.
@@ -15,6 +15,7 @@ pub fn evaluate<N>(
 ) -> Result<Vec<Option<usize>>, String>
 where
     N: MandelbrotNumber,
+    for<'a> &'a N: Mul<Output=N>
 {
     let mut eval = MandelbrotEval::<N>::new(&params.x, &params.y, params.size)?;
     // TODO: incremental evaluation; check for cancellation.
@@ -68,6 +69,7 @@ pub struct MandelbrotEval<N> {
 impl<N> MandelbrotEval<N>
 where
     N: MandelbrotNumber,
+    for<'a> &'a N: Mul<Output=N>
 {
     /// Construct a new evaluator for the given type.
     ///
@@ -122,6 +124,7 @@ where
 impl<N> Mandelbrot for MandelbrotEval<N>
 where
     N: MandelbrotNumber,
+    for<'a> &'a N: Mul<Output=N>
 {
     fn name(&self) -> &str {
         &self.name
@@ -172,6 +175,7 @@ enum TraceState<N> {
 impl<N> MandelbrotCell<N>
 where
     N: MandelbrotNumber,
+    for<'a> &'a N: Mul<&'a N, Output=N>
 {
     /// Construct a new MandelbrotCell at the given coordinate.
     fn new(coordinate: Complex<N>) -> Self {
@@ -195,7 +199,7 @@ where
         let four: N = N::four();
 
         for i in 0..iters_more {
-            *z = z.clone() * z.clone() + self.coordinate.clone();
+            *z = z.square() + self.coordinate.clone();
             let z_magnitude_squared = z.re.clone() * z.re.clone() + z.im.clone() * z.im.clone();
 
             // The Mandelbrot "escape condition" is that the Cartesian distance from the zero point

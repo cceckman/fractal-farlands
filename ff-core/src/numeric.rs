@@ -2,7 +2,7 @@ use std::ops::{Add, Mul, Sub};
 
 use num::{BigRational, ToPrimitive};
 
-use crate::masked_float::MaskedFloat;
+use crate::{mandelbrot::MandelbrotNumber, masked_float::MaskedFloat};
 
 /// A numeric type that can be converted from a BigRational.
 ///
@@ -43,6 +43,22 @@ impl FromRational for BigRational {
 pub struct Complex<N> {
     pub re: N,
     pub im: N,
+}
+
+impl<N> Complex<N>
+where
+    N: MandelbrotNumber,
+    for<'a> &'a N: Mul<&'a N, Output=N>,
+{
+    /// Squares the given number.
+    /// Per https://github.com/cceckman/fractal-farlands/issues/9, this takes fewer operations than
+    /// a generic multiply.
+    pub fn square(&self) -> Self {
+        // (a+bi)^2 = (a^2-b^2) + 2abi
+        let re = &self.re * &self.re - &self.im * &self.im;
+        let im = <N as MandelbrotNumber>::two() * (&self.re * &self.im);
+        Self {re, im}
+    }
 }
 
 impl<N> Mul<Complex<N>> for Complex<N>

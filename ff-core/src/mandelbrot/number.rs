@@ -21,17 +21,28 @@ pub trait MandelbrotNumber:
     + PartialOrd<Self>
     + FromRational
     + std::fmt::Debug
+    where 
+    for<'a> &'a Self: Mul<&'a Self, Output=Self>
 {
     // Provides this type's representation of zero.
     fn zero() -> Self;
 
+    // Provides this type's representation of two.
+    fn two() -> Self;
+
     // Provides this type's representation of four.
-    fn four() -> Self;
+    fn four() -> Self {
+        Self::two() + Self::two()
+    }
 }
 
 impl MandelbrotNumber for f32 {
     fn zero() -> Self {
         0f32
+    }
+
+    fn two() -> Self {
+        2f32
     }
 
     fn four() -> Self {
@@ -44,6 +55,10 @@ impl MandelbrotNumber for f64 {
         0f64
     }
 
+    fn two() -> Self {
+        2f64
+    }
+
     fn four() -> Self {
         4f64
     }
@@ -52,6 +67,9 @@ impl MandelbrotNumber for f64 {
 impl MandelbrotNumber for BigRational {
     fn zero() -> Self {
         BigRational::new(0.into(), 1.into())
+    }
+    fn two() -> Self {
+        BigRational::new(2.into(), 1.into())
     }
     fn four() -> Self {
         BigRational::new(4.into(), 1.into())
@@ -62,6 +80,10 @@ impl<const E: usize, const F: usize> MandelbrotNumber for MaskedFloat<E, F> {
     fn zero() -> Self {
         MaskedFloat::<E, F>::new(0.0)
     }
+    fn two() -> Self {
+        MaskedFloat::<E, F>::new(2.0)
+    }
+
     fn four() -> Self {
         MaskedFloat::<E, F>::new(4.0)
     }
@@ -75,6 +97,10 @@ macro_rules! impl_fixed {
             fn zero() -> Self {
                 Self::unwrapped_from_num(0)
             }
+            fn two() -> Self {
+                Self::unwrapped_from_num(2)
+            }
+
             fn four() -> Self {
                 Self::unwrapped_from_num(4)
             }

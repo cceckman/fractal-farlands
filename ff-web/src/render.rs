@@ -35,6 +35,9 @@ fn mandelbrot_render(
         "MaskedFloat<4,50>" => {
             mandelbrot::evaluate::<masked_float::MaskedFloat<4, 50>>(&request, iters)
         }
+        "I11F5" => mandelbrot::evaluate::<fixed::types::I11F5>(&request, iters),
+        "I13F3" => mandelbrot::evaluate::<fixed::types::I13F3>(&request, iters),
+        "I15F1" => mandelbrot::evaluate::<fixed::types::I15F1>(&request, iters),
         _ => return Err(axum::http::StatusCode::NOT_FOUND.into()),
     };
     tracing::debug!("mandelbrot-computed");

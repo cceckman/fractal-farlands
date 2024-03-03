@@ -85,9 +85,14 @@ struct WindowParams {
 
 impl WindowParams {
     fn to_request(self, fractal: String, numeric: String) -> Result<RenderRequest, String> {
-        let range = |v: BigInt| {
-            let start = BigRational::new(v.clone(), self.scale.clone());
-            let end = BigRational::new(v + &self.window, self.scale.clone());
+        // Web request uses center; internals use a window.
+        // Compute the window.
+        let half_range = self.window / 2;
+
+
+        let range = |v: &BigInt| {
+            let start = BigRational::new(v - &half_range, self.scale.clone());
+            let end = BigRational::new(v + &half_range, self.scale.clone());
             start..end
         };
 
@@ -96,8 +101,8 @@ impl WindowParams {
                 width: self.res,
                 height: self.res,
             },
-            x: range(self.x),
-            y: range(self.y),
+            x: range(&self.x),
+            y: range(&self.y),
             numeric,
         };
         let fractal = match fractal.as_str() {

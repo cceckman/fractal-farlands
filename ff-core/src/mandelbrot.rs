@@ -12,37 +12,32 @@ mod number;
 use num::BigRational;
 pub use number::MandelbrotNumber;
 
-/// Evaluate a mandelbrot fractal according to the
+/// Evaluate a mandelbrot fractal according to the params,
 /// using any parallelism available in the provided pool.
 pub fn evaluate_parallel(
-    pool: &rayon::ThreadPool,
     params: &CommonParams,
     iterations: usize,
 ) -> Result<Vec<Option<usize>>, String> {
-    let computer: fn(
-        &rayon::ThreadPool,
-        &CommonParams,
-        usize,
-    ) -> Result<Vec<Option<usize>>, String> = match params.numeric.as_str() {
-        "f32" => evaluate_parallel_numeric::<f32>,
-        "f64" => evaluate_parallel_numeric::<f64>,
-        "MaskedFloat<3,50>" => evaluate_parallel_numeric::<MaskedFloat<3, 50>>,
-        "MaskedFloat<4,50>" => evaluate_parallel_numeric::<MaskedFloat<4, 50>>,
-        "I11F5" => evaluate_parallel_numeric::<fixed::types::I11F5>,
-        "I13F3" => evaluate_parallel_numeric::<fixed::types::I13F3>,
-        "I15F1" => evaluate_parallel_numeric::<fixed::types::I15F1>,
-        _ => {
-            return Err(format!(
-                "unknown numeric format {}",
-                params.numeric.as_str()
-            ))
-        }
-    };
-    computer(pool, params, iterations)
+    let computer: fn(&CommonParams, usize) -> Result<Vec<Option<usize>>, String> =
+        match params.numeric.as_str() {
+            "f32" => evaluate_parallel_numeric::<f32>,
+            "f64" => evaluate_parallel_numeric::<f64>,
+            "MaskedFloat<3,50>" => evaluate_parallel_numeric::<MaskedFloat<3, 50>>,
+            "MaskedFloat<4,50>" => evaluate_parallel_numeric::<MaskedFloat<4, 50>>,
+            "I11F5" => evaluate_parallel_numeric::<fixed::types::I11F5>,
+            "I13F3" => evaluate_parallel_numeric::<fixed::types::I13F3>,
+            "I15F1" => evaluate_parallel_numeric::<fixed::types::I15F1>,
+            _ => {
+                return Err(format!(
+                    "unknown numeric format {}",
+                    params.numeric.as_str()
+                ))
+            }
+        };
+    computer(params, iterations)
 }
 
 fn evaluate_parallel_numeric<N>(
-    pool: &rayon::ThreadPool,
     params: &CommonParams,
     iterations: usize,
 ) -> Result<Vec<Option<usize>>, String>
@@ -57,7 +52,7 @@ where
         let step = (&r.end - &r.start) / BigRational::new(steps.into(), 1.into());
         let mut results = Vec::with_capacity(steps);
         let mut next = r.start.clone();
-        for i in 0..steps {
+        for _ in 0..steps {
             let converted = N::from_bigrational(&next)?;
             results.push(converted);
             next += &step;
@@ -69,16 +64,16 @@ where
     let mut output: Vec<Option<usize>> = Vec::new();
     output.resize(size.width * size.height, None);
 
-    pool.scope(|_s| {
-        let out_rows = output.chunks_mut(size.width);
-        ys.into_iter()
-            .zip(out_rows)
-            .par_bridge()
-            .into_par_iter()
-            .for_each(|(y, row_out)| xs.iter().zip(row_out).for_each(|(x, out)| {
+    let out_rows = output.chunks_mut(size.width);
+    ys.into_iter()
+        .zip(out_rows)
+        .par_bridge()
+        .into_par_iter()
+        .for_each(|(y, row_out)| {
+            xs.iter().zip(row_out).for_each(|(x, out)| {
                 *out = escape(x, &y, iterations);
-            }))
-    });
+            })
+        });
 
     Ok(output)
 }
@@ -90,9 +85,15 @@ where
     for<'a> &'a N: Mul<Output = N>,
     for<'a> N: Add<&'a N, Output = N>,
 {
-    let mut z : Complex<N> = Complex{ re: N::zero(), im: N::zero() };
+    let mut z: Complex<N> = Complex {
+        re: N::zero(),
+        im: N::zero(),
+    };
     let four: N = N::four();
-    let coord = Complex{re: x.clone(), im: y.clone()};
+    let coord = Complex {
+        re: x.clone(),
+        im: y.clone(),
+    };
 
     for i in 0..limit {
         let sq = z.square();

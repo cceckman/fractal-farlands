@@ -12,7 +12,7 @@ pub use numeric::FromRational;
 
 
 /// Rendering-request parameters, common across renderables.
-#[derive(Debug)]
+#[derive(Debug,Clone)]
 pub struct CommonParams {
     /// Rendered size, in pixels
     pub size: Size,
@@ -29,7 +29,7 @@ pub struct CommonParams {
 
 /// Fractal-specific rendering parameters.
 #[non_exhaustive]
-#[derive(Debug)]
+#[derive(Debug,Clone)]
 pub enum FractalParams {
     Mandelbrot{
         iters: usize,
@@ -45,7 +45,7 @@ impl FractalParams {
 }
 
 /// Request for rendering a fractal.
-#[derive(Debug)]
+#[derive(Debug,Clone)]
 pub struct RenderRequest{
     pub common: CommonParams,
     pub fractal: FractalParams,

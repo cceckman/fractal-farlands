@@ -134,6 +134,14 @@ impl<'a, const E: usize, const F: usize> std::ops::Mul<&'a MaskedFloat<E, F>> fo
     }
 }
 
+impl<'a, const E: usize, const F: usize> std::ops::Add<&'a MaskedFloat<E, F>> for MaskedFloat<E, F> {
+    type Output = MaskedFloat<E, F>;
+
+    fn add(self, other: &'_ MaskedFloat<E, F>) -> MaskedFloat<E, F> {
+        (self.val + other.val).into()
+    }
+}
+
 impl<const E: usize, const F: usize> std::ops::Div for MaskedFloat<E, F> {
     type Output = Self;
 

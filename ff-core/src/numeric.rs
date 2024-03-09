@@ -9,24 +9,32 @@ use crate::{mandelbrot::MandelbrotNumber, masked_float::MaskedFloat};
 /// This is provided as a distinct trait because we can't expect `From<BigRational>`
 /// on foreign types.
 pub trait FromRational {
-    fn from_bigrational(r: &BigRational) -> Result<Self, String> where Self: Sized;
+    fn from_bigrational(r: &BigRational) -> Result<Self, String>
+    where
+        Self: Sized;
 }
 
 impl FromRational for f32 {
-    fn from_bigrational(r: &BigRational) -> Result<Self, String> where Self: Sized {
+    fn from_bigrational(r: &BigRational) -> Result<Self, String>
+    where
+        Self: Sized,
+    {
         r.to_f32().ok_or(format!("failed conversion from {}", r))
     }
 }
 
 impl FromRational for f64 {
-    fn from_bigrational(r: &BigRational) -> Result<Self, String> where Self: Sized {
+    fn from_bigrational(r: &BigRational) -> Result<Self, String>
+    where
+        Self: Sized,
+    {
         r.to_f64().ok_or(format!("failed conversion from {}", r))
     }
 }
 
 impl<const E: usize, const F: usize> FromRational for MaskedFloat<E, F> {
     fn from_bigrational(value: &BigRational) -> Result<Self, String> {
-        let f : f64 = f64::from_bigrational(value)?;
+        let f: f64 = f64::from_bigrational(value)?;
         Ok(MaskedFloat::<E, F>::new(f))
     }
 }
@@ -48,7 +56,7 @@ pub struct Complex<N> {
 impl<N> Complex<N>
 where
     N: MandelbrotNumber,
-    for<'a> &'a N: Mul<&'a N, Output=N>,
+    for<'a> &'a N: Mul<&'a N, Output = N>,
 {
     /// Squares the given number.
     /// Per https://github.com/cceckman/fractal-farlands/issues/9, this takes fewer operations than
@@ -57,7 +65,7 @@ where
         // (a+bi)^2 = (a^2-b^2) + 2abi
         let re = &self.re * &self.re - &self.im * &self.im;
         let im = <N as MandelbrotNumber>::two() * (&self.re * &self.im);
-        Self {re, im}
+        Self { re, im }
     }
 }
 
@@ -90,5 +98,18 @@ where
             re: self.re + rhs.re,
             im: self.im + rhs.im,
         }
+    }
+}
+
+impl<N> Add<&Complex<N>> for Complex<N>
+where
+    for<'a> N: Add<&'a N, Output = N>,
+{
+    type Output = Complex<N>;
+
+    fn add(self, rhs: &Complex<N>) -> Self::Output {
+        let re: N = self.re + &rhs.re;
+        let im: N = self.im + &rhs.im;
+        Complex { re, im }
     }
 }

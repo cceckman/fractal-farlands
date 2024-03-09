@@ -13,7 +13,7 @@ use std::{
     sync::{mpsc::Receiver, Arc},
 };
 
-use ff_core::RenderRequest;
+use ff_core::{RenderRequest,CanceledFunction};
 mod oneshot;
 
 pub struct RenderServer {
@@ -89,9 +89,10 @@ fn dispatch(pool: rayon::ThreadPool, receiver: Receiver<ImageRequest>) {
 
 fn render(pool: Arc<rayon::ThreadPool>, req: ImageRequest) {
     let ImageRequest { request, result } = req;
+    let canceled = || result.is_canceled();
     let res = match request.fractal {
         ff_core::FractalParams::Mandelbrot { iters } => {
-            mandelbrot_render(&pool, request.common, iters)
+            mandelbrot_render(&canceled, request.common, iters)
         }
         _ => Err(Error::InvalidArgument("unknown fractal".to_owned())),
     };
@@ -99,7 +100,7 @@ fn render(pool: Arc<rayon::ThreadPool>, req: ImageRequest) {
 }
 
 fn mandelbrot_render(
-    pool: &rayon::ThreadPool,
+    cancelled: &impl CanceledFunction,
     request: ff_core::CommonParams,
     iters: usize,
 ) -> Result<image::DynamicImage, Error> {
@@ -109,7 +110,7 @@ fn mandelbrot_render(
     let _guard = span.enter();
     let size = request.size.clone();
 
-    let output = ff_core::mandelbrot::evaluate_parallel(&request, iters)
+    let output = ff_core::mandelbrot::evaluate_parallel(cancelled, &request, iters)
         .map_err(|msg| Error::Internal(msg))?;
     tracing::debug!("mandelbrot-computed");
 

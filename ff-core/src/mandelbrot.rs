@@ -11,14 +11,19 @@ use crate::{masked_float::MaskedFloat, numeric::Complex, CommonParams, Size};
 mod number;
 use num::BigRational;
 pub use number::MandelbrotNumber;
+use crate::CanceledFunction;
 
 /// Evaluate a mandelbrot fractal according to the params,
 /// using any parallelism available in the provided pool.
+///
+/// The "canceled" parameter can be checked to see if the computation should early-exit
+/// with a cancellation.
 pub fn evaluate_parallel(
+    canceled: &impl CanceledFunction,
     params: &CommonParams,
     iterations: usize,
 ) -> Result<Vec<Option<usize>>, String> {
-    let computer: fn(&CommonParams, usize) -> Result<Vec<Option<usize>>, String> =
+    let computer: fn(&dyn CanceledFunction, &CommonParams, usize) -> Result<Vec<Option<usize>>, String> =
         match params.numeric.as_str() {
             "f32" => evaluate_parallel_numeric::<f32>,
             "f64" => evaluate_parallel_numeric::<f64>,
@@ -34,10 +39,11 @@ pub fn evaluate_parallel(
                 ))
             }
         };
-    computer(params, iterations)
+    computer(canceled, params, iterations)
 }
 
 fn evaluate_parallel_numeric<N>(
+    canceled: &dyn CanceledFunction,
     params: &CommonParams,
     iterations: usize,
 ) -> Result<Vec<Option<usize>>, String>
@@ -69,13 +75,20 @@ where
         .zip(out_rows)
         .par_bridge()
         .into_par_iter()
+        // Check for cancellation at each row.
+        // We don't check at each pixel because, well, that's just too many;
+        // same reason as we don't paralellize by pixel.
+        .take_any_while(|_| !canceled())
         .for_each(|(y, row_out)| {
             xs.iter().zip(row_out).for_each(|(x, out)| {
                 *out = escape(x, &y, iterations);
             })
         });
-
-    Ok(output)
+    if canceled() {
+        Err("canceled".to_string()) }
+    else {
+        Ok(output)
+    }
 }
 
 #[inline]

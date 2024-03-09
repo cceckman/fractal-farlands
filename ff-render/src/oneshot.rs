@@ -32,7 +32,7 @@ pub struct Sender<T> {
 
 impl<T> Sender<T> {
     /// Returns true if the receiver has hung up.
-    pub fn is_cancelled(&self) -> bool {
+    pub fn is_canceled(&self) -> bool {
         let g = match self.shared.state.lock() {
             Err(_) => return true,
             Ok(v) => v,

@@ -10,6 +10,10 @@ mod numeric;
 
 pub use numeric::FromRational;
 
+/// Cancellation callback, to allow rendering to early-exit.
+/// Analogous to Go's `context.Context`.
+pub trait CanceledFunction : (Fn() -> bool) + Sync + Send {}
+impl<T> CanceledFunction for T where T: (Fn() -> bool) + Sync + Send {}
 
 /// Rendering-request parameters, common across renderables.
 #[derive(Debug,Clone)]

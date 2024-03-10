@@ -81,17 +81,16 @@ fn dispatch(pool: rayon::ThreadPool, receiver: Receiver<ImageRequest>) {
         // spawn_fifo so that images complete in ~the same order as requested;
         // we don't want partially-rendered images.
         pool.spawn_fifo({
-            let pool = pool.clone();
-            || render(pool, req)
+            || render(req)
         })
     }
 }
 
-fn render(pool: Arc<rayon::ThreadPool>, req: ImageRequest) {
+fn render(req: ImageRequest) {
     let ImageRequest { request, result } = req;
     let res = match request.fractal {
         ff_core::FractalParams::Mandelbrot { iters } => {
-            mandelbrot_render(&pool, request.common, iters)
+            mandelbrot_render(request.common, iters)
         }
         _ => Err(Error::InvalidArgument("unknown fractal".to_owned())),
     };
@@ -99,7 +98,6 @@ fn render(pool: Arc<rayon::ThreadPool>, req: ImageRequest) {
 }
 
 fn mandelbrot_render(
-    pool: &rayon::ThreadPool,
     request: ff_core::CommonParams,
     iters: usize,
 ) -> Result<image::DynamicImage, Error> {

@@ -12,7 +12,7 @@ impl Renderer {
     pub fn render(
         &self,
         size: Size,
-        data: Vec<Option<usize>>,
+        data: Vec<Option<(usize,f64)>>,
     ) -> Result<image::DynamicImage, String> {
         if data.len() != (size.width * size.height) {
             return Err(format!(
@@ -28,12 +28,12 @@ impl Renderer {
             .iter()
             .fold((usize::MAX, usize::MIN), |(min, max), v| match v {
                 None => (min, max),
-                Some(v) => (std::cmp::min(*v, min), std::cmp::max(*v, max)),
+                Some((v,_)) => (std::cmp::min(*v, min), std::cmp::max(*v, max)),
             });
 
         let pixel_values = data.into_iter().map(|v| match v {
             None => image::Rgb([0, 0, 0]),
-            Some(v) => value_to_rgb(min, max, v),
+            Some((v,escape)) => value_to_rgb(min, max, v, escape),
         });
 
         let mut img = image::ImageBuffer::<image::Rgb<u8>, _>::new(size.width as u32, size.height as u32);
@@ -48,15 +48,18 @@ impl Renderer {
 }
 
 /// Convert a value within a range to an RGB value.
-fn value_to_rgb(min: usize, max: usize, value: usize) -> image::Rgb<u8> {
+fn value_to_rgb(min: usize, max: usize, value: usize, escape: f64) -> image::Rgb<u8> {
     // hue is in range [0, 1]
     let denom = match (max - min) as i64 {
         0 => 1,
         v => v,
     };
+    // Smooth Mandelbrot coloring from https://mrob.com/pub/muency/continuousdwell.html
+    let offset: i64 = ((4.0f64.log2().log2() - escape.log2().log2()) * (360.0f64/(denom as f64))) as i64;
     let hue = num::Rational64::new((value - min) as i64, denom);
     // H in range [0, 360]
-    let hue = (hue * 360).to_integer();
+    let ohue = (hue * 360).to_integer();
+    let hue = (hue * 360).to_integer() + offset;
 
     // Formulas from Wikipedia:
     //
@@ -65,25 +68,25 @@ fn value_to_rgb(min: usize, max: usize, value: usize) -> image::Rgb<u8> {
     // But we're fully saturating L=0.5, S=1, so C = 1.
 
     //  H' = H / 60deg
-    let hprime = hue / 60;
+    let hprime = (hue as f64) / 60.0;
     //  X = C * (1 - |H' mod 2 - 1|)
     // C == 1, so we can reduce that term out.
-    let x = 1 - ((hprime % 2) - 1).abs();
+    let x = 1.0 - ((hprime % 2.0) - 1.0).abs();
 
     //  m = L - C / 2
     // but with L=0.5 and C = 1, m == 0.
     // And we want to scale to 0, 255...so:
-    let x = (x as u8).saturating_mul(255);
+    let x = (x * 255.0) as u8;
     let c = 255;
-    let (r, g, b) = if hprime < 1 {
+    let (r, g, b) = if hprime < 1.0 {
         (c, x, 0)
-    } else if hprime < 2 {
+    } else if hprime < 2.0 {
         (x, c, 0)
-    } else if hprime < 3 {
+    } else if hprime < 3.0 {
         (0, c, x)
-    } else if hprime < 4 {
+    } else if hprime < 4.0 {
         (0, x, c)
-    } else if hprime < 5 {
+    } else if hprime < 5.0 {
         (x, 0, c)
     } else {
         (c, 0, x)

@@ -17,8 +17,8 @@ pub use number::MandelbrotNumber;
 pub fn evaluate_parallel(
     params: &CommonParams,
     iterations: usize,
-) -> Result<Vec<Option<usize>>, String> {
-    let computer: fn(&CommonParams, usize) -> Result<Vec<Option<usize>>, String> =
+) -> Result<Vec<Option<(usize,f64)>>, String> {
+    let computer: fn(&CommonParams, usize) -> Result<Vec<Option<(usize,f64)>>, String> =
         match params.numeric.as_str() {
             "f32" => evaluate_parallel_numeric::<f32>,
             "f64" => evaluate_parallel_numeric::<f64>,
@@ -40,7 +40,7 @@ pub fn evaluate_parallel(
 fn evaluate_parallel_numeric<N>(
     params: &CommonParams,
     iterations: usize,
-) -> Result<Vec<Option<usize>>, String>
+) -> Result<Vec<Option<(usize,f64)>>, String>
 where
     N: MandelbrotNumber + Send + Sync,
     for<'a> &'a N: Mul<Output = N>,
@@ -61,7 +61,7 @@ where
     };
     let xs = make_range(&params.x, size.width)?;
     let ys = make_range(&params.y, size.height)?;
-    let mut output: Vec<Option<usize>> = Vec::new();
+    let mut output: Vec<Option<(usize,f64)>> = Vec::new();
     output.resize(size.width * size.height, None);
 
     let out_rows = output.chunks_mut(size.width);
@@ -79,7 +79,7 @@ where
 }
 
 #[inline]
-fn escape<N>(x: &N, y: &N, limit: usize) -> Option<usize>
+fn escape<N>(x: &N, y: &N, limit: usize) -> Option<(usize,f64)>
 where
     N: MandelbrotNumber,
     for<'a> &'a N: Mul<Output = N>,
@@ -106,14 +106,14 @@ where
         // Normally, that distance is sqrt(x^2+y^2) - but we can skip the square-root and avoid
         // a trait requirement by comparing d^2 to 2^2 instead:
         if z_magnitude_squared >= four {
-            return Some(i);
+            return Some((i,z_magnitude_squared.to_f64()));
         }
     }
     return None;
 }
 
 /// All-in-one routine for evaluating a portion of the Mandelbrot fractal.
-pub fn evaluate<N>(params: &CommonParams, iterations: usize) -> Result<Vec<Option<usize>>, String>
+pub fn evaluate<N>(params: &CommonParams, iterations: usize) -> Result<Vec<Option<(usize,f64)>>, String>
 where
     N: MandelbrotNumber,
     for<'a> &'a N: Mul<Output = N>,
@@ -146,10 +146,10 @@ pub trait Mandelbrot {
     fn advance(&mut self, num_iters: usize);
 
     /// Returns the state of this Mandelbrot evaluator:
-    /// which cells have escaped, and in what iteration they escaped.
+    /// which cells have escaped, and in what iteration they escaped, and the magnitude at escape
     ///
     /// Cells are presented in row-major order, i.e. [y][x], according to the dimensions in `size`.
-    fn state(&self) -> Vec<Option<usize>>;
+    fn state(&self) -> Vec<Option<(usize, f64)>>;
 }
 
 /// A state-preserving Mandelbrot evaluator.
@@ -246,12 +246,12 @@ where
         self.iterations += num_iters
     }
 
-    fn state(&self) -> Vec<Option<usize>> {
+    fn state(&self) -> Vec<Option<(usize,f64)>> {
         self.state
             .iter()
             .map(|cell| match cell.state {
                 TraceState::Active(_) => None,
-                TraceState::Escaped(iters) => Some(iters),
+                TraceState::Escaped(iters,escape) => Some((iters, escape)),
             })
             .collect()
     }
@@ -270,7 +270,7 @@ struct MandelbrotCell<N> {
 /// either still within the |z| < 2 circle, or escaped after N iterations.
 enum TraceState<N> {
     Active(Complex<N>),
-    Escaped(usize),
+    Escaped(usize, f64),
 }
 
 impl<N> MandelbrotCell<N>
@@ -294,7 +294,7 @@ where
     /// Update to "escaped"
     fn update(&mut self, iters_past: usize, iters_more: usize) {
         let z = match &mut self.state {
-            TraceState::Escaped(_) => return,
+            TraceState::Escaped(..) => return,
             TraceState::Active(v) => v,
         };
         let four: N = N::four();
@@ -308,7 +308,7 @@ where
             // Normally, that distance is sqrt(x^2+y^2) - but we can skip the square-root and avoid
             // a trait requirement by comparing d^2 to 2^2 instead:
             if z_magnitude_squared >= four {
-                self.state = TraceState::Escaped(iters_past + i);
+                self.state = TraceState::Escaped(iters_past + i, z_magnitude_squared.to_f64());
                 return;
             }
         }

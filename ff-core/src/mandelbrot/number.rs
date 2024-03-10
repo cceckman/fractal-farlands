@@ -34,6 +34,9 @@ pub trait MandelbrotNumber:
     fn four() -> Self {
         Self::two() + Self::two()
     }
+
+    // Provides a way to get a f64 from this type.
+    fn to_f64(self) -> f64;
 }
 
 impl MandelbrotNumber for f32 {
@@ -47,6 +50,10 @@ impl MandelbrotNumber for f32 {
 
     fn four() -> Self {
         4f32
+    }
+
+    fn to_f64(self) -> f64 {
+        self.into()
     }
 }
 
@@ -62,6 +69,10 @@ impl MandelbrotNumber for f64 {
     fn four() -> Self {
         4f64
     }
+
+    fn to_f64(self) -> f64 {
+        self
+    }
 }
 
 impl MandelbrotNumber for BigRational {
@@ -73,6 +84,9 @@ impl MandelbrotNumber for BigRational {
     }
     fn four() -> Self {
         BigRational::new(4.into(), 1.into())
+    }
+    fn to_f64(self) -> f64 {
+        ToPrimitive::to_f64(&self).unwrap()
     }
 }
 
@@ -86,6 +100,10 @@ impl<const E: usize, const F: usize> MandelbrotNumber for MaskedFloat<E, F> {
 
     fn four() -> Self {
         MaskedFloat::<E, F>::new(4.0)
+    }
+
+    fn to_f64(self) -> f64 {
+        self.into()
     }
 }
 
@@ -103,6 +121,10 @@ macro_rules! impl_fixed {
 
             fn four() -> Self {
                 Self::unwrapped_from_num(4)
+            }
+
+            fn to_f64(self) -> f64 {
+                self.into()
             }
         }
 

@@ -6,16 +6,14 @@ use std::ops::{Add, Mul, Range};
 use crate::{masked_float::MaskedFloat, numeric::Complex, CommonParams};
 
 mod number;
+use crate::{Escape, EscapeVector};
 use num::BigRational;
 pub use number::MandelbrotNumber;
 
 /// Evaluate a mandelbrot fractal according to the params,
 /// using any parallelism available in the provided pool.
-pub fn evaluate_parallel(
-    params: &CommonParams,
-    iterations: usize,
-) -> Result<Vec<Option<(usize,f64)>>, String> {
-    let computer: fn(&CommonParams, usize) -> Result<Vec<Option<(usize,f64)>>, String> =
+pub fn evaluate_parallel(params: &CommonParams, iterations: usize) -> Result<EscapeVector, String> {
+    let computer: fn(&CommonParams, usize) -> Result<EscapeVector, String> =
         match params.numeric.as_str() {
             "f32" => evaluate_parallel_numeric::<f32>,
             "f64" => evaluate_parallel_numeric::<f64>,
@@ -37,7 +35,7 @@ pub fn evaluate_parallel(
 fn evaluate_parallel_numeric<N>(
     params: &CommonParams,
     iterations: usize,
-) -> Result<Vec<Option<(usize,f64)>>, String>
+) -> Result<EscapeVector, String>
 where
     N: MandelbrotNumber + Send + Sync,
     for<'a> &'a N: Mul<Output = N>,
@@ -58,7 +56,7 @@ where
     };
     let xs = make_range(&params.x, size.width)?;
     let ys = make_range(&params.y, size.height)?;
-    let mut output: Vec<Option<(usize,f64)>> = Vec::new();
+    let mut output: EscapeVector = Vec::new();
     output.resize(size.width * size.height, None);
 
     let out_rows = output.chunks_mut(size.width);
@@ -76,7 +74,7 @@ where
 }
 
 #[inline]
-fn escape<N>(x: &N, y: &N, limit: usize) -> Option<(usize,f64)>
+fn escape<N>(x: &N, y: &N, limit: usize) -> Option<Escape>
 where
     N: MandelbrotNumber,
     for<'a> &'a N: Mul<Output = N>,
@@ -103,7 +101,10 @@ where
         // Normally, that distance is sqrt(x^2+y^2) - but we can skip the square-root and avoid
         // a trait requirement by comparing d^2 to 2^2 instead:
         if z_magnitude_squared >= four {
-            return Some((i,z_magnitude_squared.to_f64()));
+            return Some(Escape {
+                count: i,
+                z_magnitude_squared: z_magnitude_squared.to_f64(),
+            });
         }
     }
     return None;

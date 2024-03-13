@@ -1,4 +1,4 @@
-use crate::Size;
+use crate::{Size,Escape,EscapeVector};
 
 /// Settings for rendering a fractal into an image.
 #[derive(Default)]
@@ -12,7 +12,7 @@ impl Renderer {
     pub fn render(
         &self,
         size: Size,
-        data: Vec<Option<(usize,f64)>>,
+        data: EscapeVector,
     ) -> Result<image::DynamicImage, String> {
         if data.len() != (size.width * size.height) {
             return Err(format!(
@@ -28,12 +28,12 @@ impl Renderer {
             .iter()
             .fold((usize::MAX, usize::MIN), |(min, max), v| match v {
                 None => (min, max),
-                Some((v,_)) => (std::cmp::min(*v, min), std::cmp::max(*v, max)),
+                Some(Escape{count, ..}) => (std::cmp::min(*count, min), std::cmp::max(*count, max)),
             });
 
         let pixel_values = data.into_iter().map(|v| match v {
             None => image::Rgb([0, 0, 0]),
-            Some((v,escape)) => value_to_rgb(min, max, v, escape),
+            Some(Escape{count,z_magnitude_squared}) => value_to_rgb(min, max, count, z_magnitude_squared),
         });
 
         let mut img = image::ImageBuffer::<image::Rgb<u8>, _>::new(size.width as u32, size.height as u32);
@@ -56,10 +56,9 @@ fn value_to_rgb(min: usize, max: usize, value: usize, escape: f64) -> image::Rgb
     };
     // Smooth Mandelbrot coloring from https://mrob.com/pub/muency/continuousdwell.html
     let offset: i64 = ((4.0f64.log2().log2() - escape.log2().log2()) * (360.0f64/(denom as f64))) as i64;
-    let hue = num::Rational64::new((value - min) as i64, denom);
+    let hue_numerator = (value - min) as i64;
     // H in range [0, 360]
-    let ohue = (hue * 360).to_integer();
-    let hue = (hue * 360).to_integer() + offset;
+    let hue = ((hue_numerator * 360) / denom) + offset;
 
     // Formulas from Wikipedia:
     //

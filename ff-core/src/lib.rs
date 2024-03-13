@@ -59,3 +59,15 @@ pub struct Size {
 }
 
 pub mod image;
+
+/// Escape term: on what iteration the escape occurred, and with what value.
+#[derive(Copy,Clone,Debug)]
+pub struct Escape {
+    pub count: usize,
+    pub z_magnitude_squared: f64,
+}
+
+/// Shorthand for "the escapes for this region"
+pub type EscapeVector = Vec<Option<Escape>>;
+
+

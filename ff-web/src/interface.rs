@@ -1,30 +1,31 @@
-use crate::WindowParams;
+use crate::{UiParams, WindowParams};
 /// User-interface rendering for Fractal Farlands.
-use axum::{extract::OriginalUri, extract::Query};
+use axum::extract::Query;
 
 use maud::{html, Markup, DOCTYPE};
 use num::Integer;
 
 /// Render the user interface.
-pub async fn interface(uri: OriginalUri, Query(query): Query<WindowParams>) -> Markup {
+pub async fn interface(Query(query): Query<UiParams>) -> Result<Markup, String> {
     // Simplify WindowParams where we can- before outputting to the user.
     // This may mean our query parameters don't match; that's OK, they'll be equivalent.
-    let WindowParams{x, y, window, scale, ..} = query.clone();
+    let WindowParams{x, y, window, scale, ..} = query.window.clone();
     // Find the GCD between all of these:
     let gcd = [x, y, window, scale].into_iter().reduce(|a, b| a.gcd(&b)).unwrap_or_else(|| 1.into());
-    let query = {
-        let mut q = query;
+    let new_window = {
+        let mut q = query.window.clone();
         q.x /= &gcd;
         q.y /= &gcd;
         q.window /= &gcd;
         q.scale /= &gcd;
         q
     };
+    let new_query = UiParams{window: new_window, ..query};
 
     // TODO: Don't pass the query string through, re-render it;
     // leads to incorrect caching of the default image
 
-    html! {
+    Ok(html! {
         (DOCTYPE)
         head {
             title { "Fractal Farlands" }
@@ -32,30 +33,30 @@ pub async fn interface(uri: OriginalUri, Query(query): Query<WindowParams>) -> M
             script src="static/app.js" async {}
         }
         body {
-            (interface_body(uri.query().unwrap_or(""), &query))
+            (interface_body(&new_query)?)
         }
-    }
+    })
 }
 
-fn interface_body(query_str: &str, query: &WindowParams) -> Markup {
-    html! {
+fn interface_body(query: &UiParams) -> Result<Markup, String> {
+    Ok(html! {
         form id="form-rerender" action="/" autocomplete="off" class="parameters" {
             h2 { "Target area" }
             p {
                 label { "Center X (numerator):" }
-                input id="input-x" name="x" type="number" value=(query.x);
+                input id="input-x" name="x" type="number" value=(query.window.x);
                 " "
 
                 label { "Center Y (numerator):" }
-                input id="input-y" name="y" type="number" value=(query.y);
+                input id="input-y" name="y" type="number" value=(query.window.y);
                 " "
 
                 label { "Window size (numerator)" }
-                input id="input-window" name="window" type="number" value=(query.window);
+                input id="input-window" name="window" type="number" value=(query.window.window);
                 " "
 
                 label { "Scale (denominator):" }
-                input id="input-scale" name="scale" type="number" value=(query.scale);
+                input id="input-scale" name="scale" type="number" value=(query.window.scale);
                 " "
             }
             h2 { "Rendering settings" }
@@ -67,11 +68,11 @@ fn interface_body(query_str: &str, query: &WindowParams) -> Markup {
                 " "
 
                 label { "Resolution (pixels):" }
-                input name="res" type="number" value=(query.res);
+                input name="res" type="number" value=(query.window.res);
                 " "
 
                 label { "Max iterations:" }
-                input name="iters" type="number" value=(query.iters);
+                input name="iters" type="number" value=(query.window.iters);
                 " "
                 br;
             }
@@ -91,20 +92,19 @@ fn interface_body(query_str: &str, query: &WindowParams) -> Markup {
             }
             p { (format!("Parameters: {:?}", query)) }
 
-
             @for format in ff_core::mandelbrot::formats() {
-                (render(query_str, &query.fractal, format, query.res))
+                (render(&query.fractal, format, &query.window)?)
             }
         }
-
-    }
+    })
 }
 
-fn render(query_str: &str, fractal: &str, numeric: &str, size: usize) -> Markup {
-    html! {
+fn render(fractal: &str, format: &str, window: &WindowParams) -> Result<Markup, String> {
+    let urlencoded = serde_urlencoded::to_string(window).map_err(|err| format!("error encoding URL; parameters: {:?}, error: {}", window, err))?;
+    Ok(html! {
         div class="render-pane" {
-            h3 { (numeric) }
-            img src=(format!("/render/{}/{}?{}", fractal, numeric, query_str)) width=(size) height=(size) class="img-fractal";
+            h3 { (format) }
+            img src=(format!("/render/{}/{}?{}", fractal, format, urlencoded)) width=(window.res) height=(window.res) class="img-fractal";
         }
-    }
+    })
 }

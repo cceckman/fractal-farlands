@@ -33,80 +33,125 @@ use serde::de::{Deserialize, Deserializer};
 mod interface;
 mod render;
 mod static_content;
+pub(crate) use params::*;
 
 pub fn root_routes() -> Result<axum::Router, String> {
     tracing::info!("constructing router");
     let render_server = ff_render::RenderServer::new()?;
     Ok(Router::new()
         .route("/", get(interface::interface))
-        .route("/render/:fractal/:numeric", get({
-            let srv = Arc::new(render_server);
-            |Path((fractal, numeric)): Path<(String, String)>,
-            Query(window_params): Query<WindowParams>| async move {
-                let request = window_params.to_request(fractal, numeric)?;
-                render::render(&srv, request).await
-            }
-        }))
+        .route(
+            "/render/:fractal/:numeric",
+            get({
+                let srv = Arc::new(render_server);
+                |Path((fractal, numeric)): Path<(String, String)>,
+                 Query(window_params): Query<WindowParams>| async move {
+                    let request = window_params.to_request(fractal, numeric)?;
+                    render::render(&srv, request).await
+                }
+            }),
+        )
         .route("/static/:file", get(static_content::get)))
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
-struct WindowParams {
-    #[serde(default = "WindowParams::default_res")]
-    res: usize,
-    #[serde(default = "WindowParams::default_iters")]
-    iters: usize,
-    #[serde(default = "WindowParams::default_fractal")]
-    fractal: String,
+// Parameter types:
+// -    "Window", common to the UI and the image query
+// -    "Ui", just for the UI
+// -    "Query", just for the image
+mod params {
+    use super::*;
 
-    #[serde(
-        default = "WindowParams::default_window",
-        deserialize_with = "parse_bigint"
-    )]
-    window: BigInt,
-    #[serde(
-        default = "WindowParams::default_coord",
-        deserialize_with = "parse_bigint"
-    )]
-    x: BigInt,
-    #[serde(
-        default = "WindowParams::default_coord",
-        deserialize_with = "parse_bigint"
-    )]
-    y: BigInt,
-    #[serde(
-        default = "WindowParams::default_scale",
-        deserialize_with = "parse_bigint"
-    )]
-    scale: BigInt,
-}
+    #[derive(serde::Deserialize, Debug, Clone)]
+    pub struct UiParams {
+        #[serde(default = "WindowParams::default_fractal")]
+        pub fractal: String,
 
-impl WindowParams {
-    fn to_request(self, fractal: String, numeric: String) -> Result<RenderRequest, String> {
-        // Web request uses center; internals use a window.
-        // Compute the window.
-        let half_range = self.window / 2;
+        #[serde(flatten)]
+        pub window: WindowParams,
+    }
 
-        let range = |v: &BigInt| {
-            let start = BigRational::new(v - &half_range, self.scale.clone());
-            let end = BigRational::new(v + &half_range, self.scale.clone());
-            start..end
-        };
+    #[derive(serde::Deserialize, serde::Serialize, Debug, Clone, Default)]
+    pub struct WindowParams {
+        #[serde(
+            default = "WindowParams::default_window",
+            deserialize_with = "parse_bigint",
+            serialize_with = "serialize_bigint"
+        )]
+        pub window: BigInt,
+        #[serde(
+            default = "WindowParams::default_coord",
+            deserialize_with = "parse_bigint",
+            serialize_with = "serialize_bigint"
+        )]
+        pub x: BigInt,
+        #[serde(
+            default = "WindowParams::default_coord",
+            deserialize_with = "parse_bigint",
+            serialize_with = "serialize_bigint"
+        )]
+        pub y: BigInt,
+        #[serde(
+            default = "WindowParams::default_scale",
+            deserialize_with = "parse_bigint",
+            serialize_with = "serialize_bigint"
+        )]
+        pub scale: BigInt,
 
-        let common = CommonParams {
-            size: Size {
-                width: self.res,
-                height: self.res,
-            },
-            x: range(&self.x),
-            y: range(&self.y),
-            numeric,
-        };
-        let fractal = match fractal.as_str() {
-            "mandelbrot" => Ok(FractalParams::Mandelbrot { iters: self.iters }),
-            v => Err(format!("unknown fractal '{}'", v)),
-        }?;
-        Ok(RenderRequest { common, fractal })
+        #[serde(default = "WindowParams::default_res")]
+        pub res: usize,
+        #[serde(default = "WindowParams::default_iters")]
+        pub iters: usize,
+    }
+
+    impl WindowParams {
+        pub fn to_request(self, fractal: String, numeric: String) -> Result<RenderRequest, String> {
+            // Web request uses center; internals use a window.
+            // Compute the window.
+            let half_range = self.window / 2;
+
+            let range = |v: &BigInt| {
+                let start = BigRational::new(v - &half_range, self.scale.clone());
+                let end = BigRational::new(v + &half_range, self.scale.clone());
+                start..end
+            };
+
+            let common = CommonParams {
+                size: Size {
+                    width: self.res,
+                    height: self.res,
+                },
+                x: range(&self.x),
+                y: range(&self.y),
+                numeric,
+            };
+            let fractal = match fractal.as_str() {
+                "mandelbrot" => Ok(FractalParams::Mandelbrot { iters: self.iters }),
+                v => Err(format!("unknown fractal '{}'", v)),
+            }?;
+            Ok(RenderRequest { common, fractal })
+        }
+    }
+
+    impl WindowParams {
+        fn default_fractal() -> String {
+            "mandelbrot".to_owned()
+        }
+        fn default_res() -> usize {
+            512
+        }
+        fn default_iters() -> usize {
+            16
+        }
+
+        fn default_window() -> BigInt {
+            4.into()
+        }
+        fn default_coord() -> BigInt {
+            0.into()
+        }
+        fn default_scale() -> BigInt {
+            1.into()
+        }
     }
 }
 
@@ -119,24 +164,9 @@ where
     buf.parse().map_err(serde::de::Error::custom)
 }
 
-impl WindowParams {
-    fn default_fractal() -> String {
-        "mandelbrot".to_owned()
-    }
-    fn default_res() -> usize {
-        512
-    }
-    fn default_iters() -> usize {
-        16
-    }
-
-    fn default_window() -> BigInt {
-        4.into()
-    }
-    fn default_coord() -> BigInt {
-        0.into()
-    }
-    fn default_scale() -> BigInt {
-        1.into()
-    }
+fn serialize_bigint<S>(i: &BigInt, s: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::ser::Serializer,
+{
+    s.serialize_str(&i.to_string())
 }

@@ -10,26 +10,39 @@ use crate::{Escape, EscapeVector};
 use num::BigRational;
 pub use number::MandelbrotNumber;
 
-/// Evaluate a mandelbrot fractal according to the params,
-/// using any parallelism available in the provided pool.
-pub fn evaluate_parallel(params: &CommonParams, iterations: usize) -> Result<EscapeVector, String> {
-    let computer: fn(&CommonParams, usize) -> Result<EscapeVector, String> =
-        match params.numeric.as_str() {
-            "f32" => evaluate_parallel_numeric::<f32>,
-            "f64" => evaluate_parallel_numeric::<f64>,
-            "MaskedFloat<3,50>" => evaluate_parallel_numeric::<MaskedFloat<3, 50>>,
-            "MaskedFloat<4,50>" => evaluate_parallel_numeric::<MaskedFloat<4, 50>>,
-            "I11F5" => evaluate_parallel_numeric::<fixed::types::I11F5>,
-            "I13F3" => evaluate_parallel_numeric::<fixed::types::I13F3>,
-            "I15F1" => evaluate_parallel_numeric::<fixed::types::I15F1>,
-            _ => {
-                return Err(format!(
-                    "unknown numeric format {}",
-                    params.numeric.as_str()
-                ))
-            }
-        };
-    computer(params, iterations)
+/// Function pointer for evaluating escape counts
+type EscapeFn = fn(&CommonParams, usize) -> Result<EscapeVector, String>;
+
+/// Pointers, by numeric format name:
+const FUNCTIONS : &[(&'static str, EscapeFn)] = &[
+        ("f32", evaluate_parallel_numeric::<f32>),
+        ("f64", evaluate_parallel_numeric::<f64>),
+        ("MaskedFloat<3,50>", evaluate_parallel_numeric::<MaskedFloat<3, 50>>),
+        ("MaskedFloat<4,50>", evaluate_parallel_numeric::<MaskedFloat<4, 50>>),
+        ("I11F5", evaluate_parallel_numeric::<fixed::types::I11F5>),
+        // ("I13F3", evaluate_parallel_numeric::<fixed::types::I13F3>),
+        // ("I15F1", evaluate_parallel_numeric::<fixed::types::I15F1>),
+];
+
+/// List the numeric formats that are valid for rendering.
+pub fn formats() -> impl Iterator<Item=&'static str> {
+    FUNCTIONS.iter().map(|(name, _)| *name)
+}
+
+/// Computes the escape values in the given window.
+///
+/// Under the hood, this uses Rayon's par_iter, so it's recommended to launch it from a Rayon
+/// thread-pool.
+pub fn compute(params: &CommonParams, iterations: usize) -> Result<EscapeVector, String> {
+    let fmt = params.numeric.as_str();
+    // Linear scan, we don't have that many options:
+    for (candidate, computer) in FUNCTIONS.iter() {
+        if *candidate == fmt {
+            return computer(params, iterations);
+        }
+    }
+
+    Err(format!("unknown numeric format {}", fmt))
 }
 
 fn evaluate_parallel_numeric<N>(

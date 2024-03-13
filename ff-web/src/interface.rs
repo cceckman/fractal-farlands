@@ -91,13 +91,10 @@ fn interface_body(query_str: &str, query: &WindowParams) -> Markup {
             }
             p { (format!("Parameters: {:?}", query)) }
 
-            (render(query_str, &query.fractal, "f32", query.res))
-            (render(query_str, &query.fractal, "f64", query.res))
-            (render(query_str, &query.fractal, "MaskedFloat<3,50>", query.res))
-            (render(query_str, &query.fractal, "MaskedFloat<4,50>", query.res))
-            (render(query_str, &query.fractal, "I11F5", query.res))
-            (render(query_str, &query.fractal, "I13F3", query.res))
-            (render(query_str, &query.fractal, "I15F1", query.res))
+
+            @for format in ff_core::mandelbrot::formats() {
+                (render(query_str, &query.fractal, format, query.res))
+            }
         }
 
     }

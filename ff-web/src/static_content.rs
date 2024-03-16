@@ -2,6 +2,11 @@ use axum::extract::Path;
 use axum::http::{header, HeaderName, StatusCode};
 use axum::response::{IntoResponse, Result};
 
+pub async fn get_index() -> StaticResponse {
+    const INDEX : &'static str = include_str!("static/index.html");
+    (headers("text/html"), INDEX)
+}
+
 pub async fn get(Path(file): Path<String>) -> Result<impl IntoResponse> {
     match file.as_str() {
         "style.css" => Ok(get_style()),

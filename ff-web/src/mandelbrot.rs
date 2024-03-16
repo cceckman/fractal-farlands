@@ -1,17 +1,46 @@
+use std::sync::Arc;
+
 use crate::WindowParams;
 /// User-interface rendering for Fractal Farlands.
-use axum::{extract::OriginalUri, extract::Query};
+use axum::{
+    extract::{OriginalUri, Path, Query},
+    routing::get,
+    Router,
+};
 
+use ff_render::RenderServer;
 use maud::{html, Markup, DOCTYPE};
 use num::Integer;
 
+pub fn router(render_server: RenderServer) -> Router {
+    let srv = Arc::new(render_server);
+    Router::new().route("/", get(interface)).route(
+        "/render/:numeric",
+        get(
+            |Path(numeric), Query(window_params): Query<WindowParams>| async move {
+                let request = window_params.to_request("mandelbrot", numeric)?;
+                crate::render::render(&srv, request).await
+            },
+        ),
+    )
+}
+
 /// Render the user interface.
-pub async fn interface(uri: OriginalUri, Query(query): Query<WindowParams>) -> Markup {
+async fn interface(uri: OriginalUri, Query(query): Query<WindowParams>) -> Markup {
     // Simplify WindowParams where we can- before outputting to the user.
     // This may mean our query parameters don't match; that's OK, they'll be equivalent.
-    let WindowParams{x, y, window, scale, ..} = query.clone();
+    let WindowParams {
+        x,
+        y,
+        window,
+        scale,
+        ..
+    } = query.clone();
     // Find the GCD between all of these:
-    let gcd = [x, y, window, scale].into_iter().reduce(|a, b| a.gcd(&b)).unwrap_or_else(|| 1.into());
+    let gcd = [x, y, window, scale]
+        .into_iter()
+        .reduce(|a, b| a.gcd(&b))
+        .unwrap_or_else(|| 1.into());
     let query = {
         let mut q = query;
         q.x /= &gcd;
@@ -27,9 +56,9 @@ pub async fn interface(uri: OriginalUri, Query(query): Query<WindowParams>) -> M
     html! {
         (DOCTYPE)
         head {
-            title { "Fractal Farlands" }
-            link rel="stylesheet" href="static/style.css";
-            script src="static/app.js" async {}
+            title { "Fractal Farlands - Mandelbrot" }
+            link rel="stylesheet" href="/static/style.css";
+            script src="/static/app.js" async {}
         }
         body {
             (interface_body(uri.query().unwrap_or(""), &query))
@@ -39,7 +68,11 @@ pub async fn interface(uri: OriginalUri, Query(query): Query<WindowParams>) -> M
 
 fn interface_body(query_str: &str, query: &WindowParams) -> Markup {
     html! {
-        form id="form-rerender" action="/" autocomplete="off" class="parameters" {
+        form id="form-rerender" action="." autocomplete="off" class="parameters" {
+            h1 { 
+                a href="/" { "Fractal Farlands" }
+                "- Mandelbrot"
+            }
             h2 { "Target area" }
             p {
                 label { "Center X (numerator):" }
@@ -60,12 +93,6 @@ fn interface_body(query_str: &str, query: &WindowParams) -> Markup {
             }
             h2 { "Rendering settings" }
             p {
-                label { "Fractal:" }
-                select {
-                    option value="mandelbrot" selected=(if query.fractal == "mandelbrot" { true } else { false }){ "Mandelbrot " }
-                }
-                " "
-
                 label { "Resolution (pixels):" }
                 input name="res" type="number" value=(query.res);
                 " "
@@ -78,7 +105,7 @@ fn interface_body(query_str: &str, query: &WindowParams) -> Markup {
             input text="Go" type="submit";
         }
         p {
-            a href="/" { "Reset" }
+            a href="." { "Reset" }
         }
 
         div {
@@ -93,18 +120,18 @@ fn interface_body(query_str: &str, query: &WindowParams) -> Markup {
 
 
             @for format in ff_core::mandelbrot::formats() {
-                (render(query_str, &query.fractal, format, query.res))
+                (render(query_str, format, query.res))
             }
         }
 
     }
 }
 
-fn render(query_str: &str, fractal: &str, numeric: &str, size: usize) -> Markup {
+fn render(query_str: &str, numeric: &str, size: usize) -> Markup {
     html! {
         div class="render-pane" {
             h3 { (numeric) }
-            img src=(format!("/render/{}/{}?{}", fractal, numeric, query_str)) width=(size) height=(size) class="img-fractal";
+            img src=(format!("render/{}?{}", numeric, query_str)) width=(size) height=(size) class="img-fractal";
         }
     }
 }

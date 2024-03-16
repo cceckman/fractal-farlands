@@ -1,5 +1,5 @@
 use rayon::prelude::*;
-use std::ops::{Add, Mul, Range};
+use std::ops::Range;
 
 /// Implementation of the Mandelbrot fractal,
 /// parameterized on a numeric type.
@@ -17,6 +17,8 @@ type EscapeFn = fn(&CommonParams, usize) -> Result<EscapeVector, String>;
 const FUNCTIONS : &[(&'static str, EscapeFn)] = &[
         ("f32", evaluate_parallel_numeric::<f32>),
         ("f64", evaluate_parallel_numeric::<f64>),
+        ("P32", evaluate_parallel_numeric::<softposit::P32>),
+        ("P8", evaluate_parallel_numeric::<softposit::P8>),
         ("MaskedFloat<3,50>", evaluate_parallel_numeric::<MaskedFloat<3, 50>>),
         ("MaskedFloat<4,50>", evaluate_parallel_numeric::<MaskedFloat<4, 50>>),
         ("I11F5", evaluate_parallel_numeric::<fixed::types::I11F5>),
@@ -51,8 +53,6 @@ fn evaluate_parallel_numeric<N>(
 ) -> Result<EscapeVector, String>
 where
     N: MandelbrotNumber + Send + Sync,
-    for<'a> &'a N: Mul<Output = N>,
-    for<'a> N: Add<&'a N, Output = N>,
 {
     let size = params.size;
     // Create the X and Y ranges up-front:
@@ -90,8 +90,6 @@ where
 fn escape<N>(x: &N, y: &N, limit: usize) -> Option<Escape>
 where
     N: MandelbrotNumber,
-    for<'a> &'a N: Mul<Output = N>,
-    for<'a> N: Add<&'a N, Output = N>,
 {
     let mut z: Complex<N> = Complex {
         re: N::zero(),
@@ -105,7 +103,7 @@ where
 
     for i in 0..limit {
         let sq = z.square();
-        z = sq + &coord;
+        z = sq + coord.clone();
 
         let z_magnitude_squared = z.re.clone() * z.re.clone() + z.im.clone() * z.im.clone();
 

@@ -18,6 +18,7 @@ const FUNCTIONS : &[(&'static str, EscapeFn)] = &[
         ("f32", evaluate_parallel_numeric::<f32>),
         ("f64", evaluate_parallel_numeric::<f64>),
         ("P32", evaluate_parallel_numeric::<softposit::P32>),
+        ("P16", evaluate_parallel_numeric::<softposit::P16>),
         ("P8", evaluate_parallel_numeric::<softposit::P8>),
         ("MaskedFloat<3,50>", evaluate_parallel_numeric::<MaskedFloat<3, 50>>),
         ("MaskedFloat<4,50>", evaluate_parallel_numeric::<MaskedFloat<4, 50>>),

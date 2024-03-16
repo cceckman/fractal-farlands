@@ -44,7 +44,7 @@ pub fn bench_multithread(c: &mut Criterion) {
     for threads in thread_range {
         let exec = RenderServer::with_threads(threads).unwrap();
 
-        for numeric in ["f32", "f64", "MaskedFloat<4,50>"] {
+        for numeric in ff_core::mandelbrot::formats() {
             req.common.numeric = numeric.to_string();
 
             group.bench_with_input(BenchmarkId::new(numeric, threads), &req, |b, input| {

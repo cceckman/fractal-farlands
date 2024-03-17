@@ -107,7 +107,7 @@ fn mandelbrot_render(
     let _guard = span.enter();
     let size = request.size.clone();
 
-    let output = ff_core::mandelbrot::evaluate_parallel(&request, iters)
+    let output = ff_core::mandelbrot::compute(&request, iters)
         .map_err(|msg| Error::Internal(msg))?;
     tracing::debug!("mandelbrot-computed");
 

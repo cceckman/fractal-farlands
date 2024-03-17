@@ -1,4 +1,7 @@
-use std::ops::{Add, Div, Mul, Sub};
+use std::{
+    mem::size_of,
+    ops::{Add, Div, Mul, Sub},
+};
 
 use num::{BigInt, BigRational, Signed, ToPrimitive};
 
@@ -21,8 +24,6 @@ pub trait MandelbrotNumber:
     + PartialOrd<Self>
     + FromRational
     + std::fmt::Debug
-    where 
-    for<'a> &'a Self: Mul<&'a Self, Output=Self>
 {
     // Provides this type's representation of zero.
     fn zero() -> Self;
@@ -180,12 +181,106 @@ impl_fixed!(fixed::types::I11F5);
 impl_fixed!(fixed::types::I13F3);
 impl_fixed!(fixed::types::I15F1);
 
-// TODO: implement for posits. How?
+impl FromRational for softposit::P32 {
+    fn from_bigrational(r: &BigRational) -> Result<Self, String>
+    where
+        Self: Sized,
+    {
+        // A quire value is either NaR or an integer multiple of the square of minPos...
+        // The smallest positive posit value, minPos, is ... Every posit value is an integer multiple of minPos.
+
+        // So: we can convert from a BigRational to an N-bit posit by:
+        // - Rounding to a multiple of the square of minPos
+        //      (Note: _square of_ minPos - tricky!)
+        // - Converting that to a quire
+        // - Converting the quire to a posit
+
+        // The smallest positive posit value, minPos, is 2^(−4n+8):
+        // const MINEXP: i32 = -4 * 32 + 8;
+        // TODO: Consider memoizing these constants, they're global but can't be static initialized.
+        // They're cheap to initialize if we do it right- by bit-shifting-
+        // but they can't do constexpr.
+        let minpos_squared: BigRational = BigRational::new(2.into(), 1.into()).pow(16 - 8 * 32);
+        let quire = {
+            const QUIRE_BYTE_COUNT: usize = 16 * 32 / 8; // 16n bits / 8 bits per byte
+            const QUIRE_WORD_COUNT: usize = QUIRE_BYTE_COUNT / size_of::<u64>();
+            let bytes = {
+                // We get the quire from the quotient:
+                let quotient = (r / minpos_squared).to_integer();
+                let mut bytes: Vec<u8> = quotient.to_signed_bytes_le().into();
+                // We need to sign-extend until we have exactly 16n bits.
+                // LE format means we append to sign-extend
+                let byte = if r.is_negative() { 0xff } else { 0x0 };
+                bytes.resize(QUIRE_BYTE_COUNT, byte);
+                bytes
+            };
+            // For whatever reason... the softposit appears to track words in reverse order?
+            let words : Vec<u64> = bytes.as_slice()
+            .chunks_exact(size_of::<u64>())
+            .map(|chunk| {
+                let mut word = [0u8; 8];
+                word.copy_from_slice(chunk);
+                u64::from_le_bytes(word)
+            })
+            .rev().collect();
+
+            let mut quire_words = [0u64; QUIRE_WORD_COUNT];
+            quire_words.copy_from_slice(&words);
+            softposit::Q32::from_bits(quire_words)
+        };
+
+        Ok(quire.to_posit())
+    }
+}
+
+impl FromRational for softposit::P16 {
+    fn from_bigrational(r: &BigRational) -> Result<Self, String>
+    where
+        Self: Sized,
+    {
+        Ok(softposit::P32::from_bigrational(r)?.into())
+    }
+}
+
+impl FromRational for softposit::P8 {
+    fn from_bigrational(r: &BigRational) -> Result<Self, String>
+    where
+        Self: Sized,
+    {
+        Ok(softposit::P32::from_bigrational(r)?.into())
+    }
+}
+
+macro_rules! impl_posit {
+    ($t:ty) => {
+        impl MandelbrotNumber for $t {
+            fn zero() -> Self {
+                Self::from_i8(0)
+            }
+            fn two() -> Self {
+                Self::from_i8(2)
+            }
+
+            fn four() -> Self {
+                Self::from_i8(4)
+            }
+
+            fn to_f64(self) -> f64 {
+                self.into()
+            }
+        }
+    }
+}
+
+impl_posit!(softposit::P32);
+impl_posit!(softposit::P16);
+impl_posit!(softposit::P8);
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use num::BigInt;
+    use softposit::P32;
 
     #[test]
     fn test_fixed_i16f3() {
@@ -215,7 +310,6 @@ mod tests {
         assert_eq!(x0, T::unwrapped_from_num(0));
         let x4: T = T::four();
         assert_eq!(x4, T::unwrapped_from_num(4));
-
         let x1p5: T = T::from_bigrational(&BigRational::new(3.into(), 2.into())).unwrap();
         assert_eq!(x1p5, T::unwrapped_from_num(1.5));
 
@@ -240,5 +334,33 @@ mod tests {
 
         // Assert that they are negations of each other
         assert_eq!(positive_mf.to_f64(), -negative_mf.to_f64());
+    }
+
+    #[test]
+    fn test_bigint_deserialize() {
+        let v = BigInt::from(1i8).to_signed_bytes_le();
+        assert_eq!(&v, &[1u8]);
+        let v = BigInt::from(-1i8).to_signed_bytes_le();
+        assert_eq!(&v, &[0xffu8]);
+    }
+
+    #[test]
+    fn test_p32_constants() {
+        const ZERO: P32 = P32::from_f32(0.0);
+        const ONE : P32 = P32::from_f32(1.0);
+        const NEG: P32 = P32::from_f32(-1.0);
+        let zero = BigRational::new(0.into(), 1.into());
+        let one = BigRational::new(1.into(), 1.into());
+        let neg = BigRational::new((-1).into(), 1.into());
+        assert_eq!(P32::from_bigrational(&zero).unwrap(), ZERO);
+        assert_eq!(P32::from_bigrational(&one).unwrap(), ONE);
+        assert_eq!(P32::from_bigrational(&neg).unwrap(), NEG);
+    }
+
+    #[test]
+    fn test_p32_small() {
+        const SMALL : P32 = P32::from_f32(1.0 / 16.0);
+        let small = BigRational::new(1.into(), 16.into());
+        assert_eq!(P32::from_bigrational(&small).unwrap(), SMALL);
     }
 }

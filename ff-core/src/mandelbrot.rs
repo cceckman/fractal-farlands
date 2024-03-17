@@ -1,5 +1,5 @@
 use rayon::prelude::*;
-use std::ops::{Add, Mul, Range};
+use std::ops::Range;
 
 /// Implementation of the Mandelbrot fractal,
 /// parameterized on a numeric type.
@@ -10,26 +10,42 @@ use crate::{Escape, EscapeVector};
 use num::BigRational;
 pub use number::MandelbrotNumber;
 
-/// Evaluate a mandelbrot fractal according to the params,
-/// using any parallelism available in the provided pool.
-pub fn evaluate_parallel(params: &CommonParams, iterations: usize) -> Result<EscapeVector, String> {
-    let computer: fn(&CommonParams, usize) -> Result<EscapeVector, String> =
-        match params.numeric.as_str() {
-            "f32" => evaluate_parallel_numeric::<f32>,
-            "f64" => evaluate_parallel_numeric::<f64>,
-            "MaskedFloat<3,50>" => evaluate_parallel_numeric::<MaskedFloat<3, 50>>,
-            "MaskedFloat<4,50>" => evaluate_parallel_numeric::<MaskedFloat<4, 50>>,
-            "I11F5" => evaluate_parallel_numeric::<fixed::types::I11F5>,
-            "I13F3" => evaluate_parallel_numeric::<fixed::types::I13F3>,
-            "I15F1" => evaluate_parallel_numeric::<fixed::types::I15F1>,
-            _ => {
-                return Err(format!(
-                    "unknown numeric format {}",
-                    params.numeric.as_str()
-                ))
-            }
-        };
-    computer(params, iterations)
+/// Function pointer for evaluating escape counts
+type EscapeFn = fn(&CommonParams, usize) -> Result<EscapeVector, String>;
+
+/// Pointers, by numeric format name:
+const FUNCTIONS : &[(&'static str, EscapeFn)] = &[
+        ("f32", evaluate_parallel_numeric::<f32>),
+        ("f64", evaluate_parallel_numeric::<f64>),
+        ("P32", evaluate_parallel_numeric::<softposit::P32>),
+        ("P16", evaluate_parallel_numeric::<softposit::P16>),
+        ("P8", evaluate_parallel_numeric::<softposit::P8>),
+        ("MaskedFloat<3,50>", evaluate_parallel_numeric::<MaskedFloat<3, 50>>),
+        ("MaskedFloat<4,50>", evaluate_parallel_numeric::<MaskedFloat<4, 50>>),
+        ("I11F5", evaluate_parallel_numeric::<fixed::types::I11F5>),
+        // ("I13F3", evaluate_parallel_numeric::<fixed::types::I13F3>),
+        // ("I15F1", evaluate_parallel_numeric::<fixed::types::I15F1>),
+];
+
+/// List the numeric formats that are valid for rendering.
+pub fn formats() -> impl Iterator<Item=&'static str> {
+    FUNCTIONS.iter().map(|(name, _)| *name)
+}
+
+/// Computes the escape values in the given window.
+///
+/// Under the hood, this uses Rayon's par_iter, so it's recommended to launch it from a Rayon
+/// thread-pool.
+pub fn compute(params: &CommonParams, iterations: usize) -> Result<EscapeVector, String> {
+    let fmt = params.numeric.as_str();
+    // Linear scan, we don't have that many options:
+    for (candidate, computer) in FUNCTIONS.iter() {
+        if *candidate == fmt {
+            return computer(params, iterations);
+        }
+    }
+
+    Err(format!("unknown numeric format {}", fmt))
 }
 
 fn evaluate_parallel_numeric<N>(
@@ -38,8 +54,6 @@ fn evaluate_parallel_numeric<N>(
 ) -> Result<EscapeVector, String>
 where
     N: MandelbrotNumber + Send + Sync,
-    for<'a> &'a N: Mul<Output = N>,
-    for<'a> N: Add<&'a N, Output = N>,
 {
     let size = params.size;
     // Create the X and Y ranges up-front:
@@ -77,8 +91,6 @@ where
 fn escape<N>(x: &N, y: &N, limit: usize) -> Option<Escape>
 where
     N: MandelbrotNumber,
-    for<'a> &'a N: Mul<Output = N>,
-    for<'a> N: Add<&'a N, Output = N>,
 {
     let mut z: Complex<N> = Complex {
         re: N::zero(),
@@ -92,7 +104,7 @@ where
 
     for i in 0..limit {
         let sq = z.square();
-        z = sq + &coord;
+        z = sq + coord.clone();
 
         let z_magnitude_squared = z.re.clone() * z.re.clone() + z.im.clone() * z.im.clone();
 

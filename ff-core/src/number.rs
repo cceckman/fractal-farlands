@@ -28,6 +28,9 @@ pub trait MandelbrotNumber:
     // Provides this type's representation of zero.
     fn zero() -> Self;
 
+    // Provides this type's representation of one.
+    fn one() -> Self;
+
     // Provides this type's representation of two.
     fn two() -> Self;
 
@@ -43,6 +46,10 @@ pub trait MandelbrotNumber:
 impl MandelbrotNumber for f32 {
     fn zero() -> Self {
         0f32
+    }
+
+    fn one() -> Self {
+        1f32
     }
 
     fn two() -> Self {
@@ -63,6 +70,10 @@ impl MandelbrotNumber for f64 {
         0f64
     }
 
+    fn one() -> Self {
+        1f64
+    }
+
     fn two() -> Self {
         2f64
     }
@@ -80,6 +91,9 @@ impl MandelbrotNumber for BigRational {
     fn zero() -> Self {
         BigRational::new(0.into(), 1.into())
     }
+    fn one() -> Self {
+        BigRational::new(1.into(), 1.into())
+    }
     fn two() -> Self {
         BigRational::new(2.into(), 1.into())
     }
@@ -95,6 +109,11 @@ impl<const E: usize, const F: usize> MandelbrotNumber for MaskedFloat<E, F> {
     fn zero() -> Self {
         MaskedFloat::<E, F>::new(0.0)
     }
+
+    fn one() -> Self {
+        MaskedFloat::<E, F>::new(1.0)
+    }
+
     fn two() -> Self {
         MaskedFloat::<E, F>::new(2.0)
     }
@@ -115,6 +134,9 @@ macro_rules! impl_fixed {
         impl MandelbrotNumber for $t {
             fn zero() -> Self {
                 Self::unwrapped_from_num(0)
+            }
+            fn one() -> Self {
+                Self::unwrapped_from_num(1)
             }
             fn two() -> Self {
                 Self::unwrapped_from_num(2)
@@ -256,6 +278,9 @@ macro_rules! impl_posit {
         impl MandelbrotNumber for $t {
             fn zero() -> Self {
                 Self::from_i8(0)
+            }
+            fn one() -> Self {
+                Self::from_i8(1)
             }
             fn two() -> Self {
                 Self::from_i8(2)

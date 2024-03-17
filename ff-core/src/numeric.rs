@@ -1,4 +1,4 @@
-use std::ops::{Add, Mul, Sub};
+use std::ops::{Add, Mul, Sub, Div};
 
 use num::{BigRational, ToPrimitive};
 
@@ -86,6 +86,24 @@ where
     }
 }
 
+impl<N> Div<Complex<N>> for Complex<N>
+where
+    N: Clone + Add<N, Output = N> + Sub<N, Output = N> + Mul<N, Output = N> + Div<N, Output = N>,
+{
+    type Output = Complex<N>;
+
+    fn div(self, rhs: Complex<N>) -> Self {
+        // https://mathworld.wolfram.com/ComplexDivision.html
+        let (a, b) = (self.re, self.im);
+        let (c, d) = (rhs.re, rhs.im);
+        let re: N = (a.clone() * c.clone() + b.clone() * d.clone())
+            / (c.clone() * c.clone() + d.clone() * d.clone());
+        let im: N = (b.clone() * c.clone() + a.clone() * d.clone())
+            / (c.clone() * c.clone() + d.clone() * d.clone());
+        Self { re, im }
+    }
+}
+
 impl<N> Add<Complex<N>> for Complex<N>
 where
     N: Add<N, Output = N>,
@@ -99,6 +117,22 @@ where
         }
     }
 }
+
+impl<N> Sub<Complex<N>> for Complex<N>
+where
+    N: Sub<N, Output = N>,
+{
+    type Output = Complex<N>;
+
+    fn sub(self, rhs: Complex<N>) -> Self {
+        Self {
+            re: self.re - rhs.re,
+            im: self.im - rhs.im,
+        }
+    }
+}
+
+
 
 impl<N> Add<&Complex<N>> for Complex<N>
 where

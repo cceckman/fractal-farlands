@@ -25,15 +25,16 @@ use num_bigint::BigInt;
 use serde::de::{Deserialize, Deserializer};
 
 mod mandelbrot;
+mod newton;
 mod render;
 mod static_content;
 
 pub fn root_routes() -> Result<axum::Router, String> {
     tracing::info!("constructing router");
-    let render_server = ff_render::RenderServer::new()?;
     Ok(Router::new()
         .route("/", get(static_content::get_index))
-        .nest("/mandelbrot/", mandelbrot::router(render_server))
+        .nest("/mandelbrot/", mandelbrot::router(ff_render::RenderServer::new()?))
+        .nest("/newton/", newton::router(ff_render::RenderServer::new()?))
         .route("/static/:file", get(static_content::get)))
 }
 
@@ -89,6 +90,7 @@ impl WindowParams {
         };
         let fractal = match fractal {
             "mandelbrot" => Ok(FractalParams::Mandelbrot { iters: self.iters }),
+            "newton" => Ok(FractalParams::Newton { iters: self.iters }),
             v => Err(format!("unknown fractal '{}'", v)),
         }?;
         Ok(RenderRequest { common, fractal })

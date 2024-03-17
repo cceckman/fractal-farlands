@@ -7,8 +7,8 @@ use num::BigRational;
 pub mod mandelbrot;
 pub mod masked_float;
 pub mod newton;
-mod numeric;
 mod number;
+mod numeric;
 
 pub use numeric::FromRational;
 

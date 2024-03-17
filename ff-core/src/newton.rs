@@ -125,12 +125,13 @@ where
         im: N::zero(),
     };
 
-    let three: Complex<N> = Complex {
-        re: N::two() + N::one(),
-        im: N::zero(),
-    };
+    let three: N = N::two() + N::one();
+
+    let six: N =  three.clone() * N::two();
+
+
     for i in 0..limit {
-        //println!("Z[{}]: re: {:?} im: {:?}", i, z.re, z.im);
+        println!("Z[{}]: re: {:?} im: {:?}", i, z.re, z.im);
         // For the z^3-1 Newton's fractal, first, check if the value is zero at the 
         // current position--if so, we're done.
         //
@@ -141,13 +142,17 @@ where
         //
         // TODO: The function and its derivative could come in as lambdas.
         let fz = z.clone() * z.clone() * z.clone() - one.clone();
-        //println!("FZ  re: {:?} im: {:?}", fz.re, fz.im); 
+        println!("FZ  re: {:?} im: {:?}", fz.re, fz.im); 
         //
         // NOTE: I think this might be wrong...
-        let fpz = three.clone() * z.clone().square();
-        //println!("FPZ re: {:?} im: {:?}", fpz.re, fpz.im);
+        //let fpz = three.clone() * z.clone().square();
+        let fpz = Complex {
+            re: three.clone() * z.re.clone() * z.re.clone() - six.clone() * z.im.clone() * z.im.clone(),
+            im: six.clone() * z.re.clone() * z.re.clone() - three.clone() * z.im.clone() * z.im.clone()
+        };
+        println!("FPZ re: {:?} im: {:?}", fpz.re, fpz.im);
         let del = fz.clone()/fpz;
-        //println!("Del re: {:?} im: {:?}", del.re, del.im);
+        println!("Del re: {:?} im: {:?}", del.re, del.im);
         // 
         // NOTE: This won't work in general. Should do a "near zero" method
         if fz == zero {

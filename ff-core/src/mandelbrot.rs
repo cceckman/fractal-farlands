@@ -5,30 +5,35 @@ use std::ops::Range;
 /// parameterized on a numeric type.
 use crate::{masked_float::MaskedFloat, numeric::Complex, CommonParams};
 
-mod number;
 use crate::{Escape, EscapeVector};
 use num::BigRational;
-pub use number::MandelbrotNumber;
+pub use crate::number::MandelbrotNumber;
 
 /// Function pointer for evaluating escape counts
 type EscapeFn = fn(&CommonParams, usize) -> Result<EscapeVector, String>;
 
 /// Pointers, by numeric format name:
-const FUNCTIONS : &[(&'static str, EscapeFn)] = &[
-        ("f32", evaluate_parallel_numeric::<f32>),
-        ("f64", evaluate_parallel_numeric::<f64>),
-        ("P32", evaluate_parallel_numeric::<softposit::P32>),
-        ("P16", evaluate_parallel_numeric::<softposit::P16>),
-        ("P8", evaluate_parallel_numeric::<softposit::P8>),
-        ("MaskedFloat<3,50>", evaluate_parallel_numeric::<MaskedFloat<3, 50>>),
-        ("MaskedFloat<4,50>", evaluate_parallel_numeric::<MaskedFloat<4, 50>>),
-        ("I11F5", evaluate_parallel_numeric::<fixed::types::I11F5>),
-        // ("I13F3", evaluate_parallel_numeric::<fixed::types::I13F3>),
-        // ("I15F1", evaluate_parallel_numeric::<fixed::types::I15F1>),
+const FUNCTIONS: &[(&'static str, EscapeFn)] = &[
+    ("f32", evaluate_parallel_numeric::<f32>),
+    ("f64", evaluate_parallel_numeric::<f64>),
+    ("P32", evaluate_parallel_numeric::<softposit::P32>),
+    ("P16", evaluate_parallel_numeric::<softposit::P16>),
+    ("P8", evaluate_parallel_numeric::<softposit::P8>),
+    (
+        "MaskedFloat<3,50>",
+        evaluate_parallel_numeric::<MaskedFloat<3, 50>>,
+    ),
+    (
+        "MaskedFloat<4,50>",
+        evaluate_parallel_numeric::<MaskedFloat<4, 50>>,
+    ),
+    ("I11F5", evaluate_parallel_numeric::<fixed::types::I11F5>),
+    // ("I13F3", evaluate_parallel_numeric::<fixed::types::I13F3>),
+    // ("I15F1", evaluate_parallel_numeric::<fixed::types::I15F1>),
 ];
 
 /// List the numeric formats that are valid for rendering.
-pub fn formats() -> impl Iterator<Item=&'static str> {
+pub fn formats() -> impl Iterator<Item = &'static str> {
     FUNCTIONS.iter().map(|(name, _)| *name)
 }
 

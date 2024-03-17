@@ -126,7 +126,9 @@ impl<const E: usize, const F: usize> std::ops::Mul for MaskedFloat<E, F> {
     }
 }
 
-impl<'a, const E: usize, const F: usize> std::ops::Mul<&'a MaskedFloat<E, F>> for &'a MaskedFloat<E, F> {
+impl<'a, const E: usize, const F: usize> std::ops::Mul<&'a MaskedFloat<E, F>>
+    for &'a MaskedFloat<E, F>
+{
     type Output = MaskedFloat<E, F>;
 
     fn mul(self, other: Self) -> MaskedFloat<E, F> {
@@ -134,7 +136,9 @@ impl<'a, const E: usize, const F: usize> std::ops::Mul<&'a MaskedFloat<E, F>> fo
     }
 }
 
-impl<'a, const E: usize, const F: usize> std::ops::Add<&'a MaskedFloat<E, F>> for MaskedFloat<E, F> {
+impl<'a, const E: usize, const F: usize> std::ops::Add<&'a MaskedFloat<E, F>>
+    for MaskedFloat<E, F>
+{
     type Output = MaskedFloat<E, F>;
 
     fn add(self, other: &'_ MaskedFloat<E, F>) -> MaskedFloat<E, F> {

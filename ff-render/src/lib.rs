@@ -92,6 +92,9 @@ fn render(req: ImageRequest) {
         ff_core::FractalParams::Mandelbrot { iters } => {
             mandelbrot_render(request.common, iters)
         }
+        ff_core::FractalParams::Newton { iters } => {
+            newton_render(request.common, iters)
+        }
         _ => Err(Error::InvalidArgument("unknown fractal".to_owned())),
     };
     result.send(res);
@@ -118,6 +121,31 @@ fn mandelbrot_render(
             Error::Internal(format!("rendering error: {}", err))
         })?;
     tracing::debug!("mandelbrot-rendered");
+
+    Ok(image)
+}
+
+fn newton_render(
+    request: ff_core::CommonParams,
+    iters: usize,
+) -> Result<image::DynamicImage, Error> {
+    tracing::info!("starting newton with format {}", request.numeric);
+
+    let span = tracing::info_span!("render-newton");
+    let _guard = span.enter();
+    let size = request.size.clone();
+
+    let output = ff_core::newton::compute(&request, iters)
+        .map_err(|msg| Error::Internal(msg))?;
+    tracing::debug!("newton-computed");
+
+    let image = ff_core::image::NewtonRenderer {}
+        .render(size, output)
+        .map_err(|err| {
+            tracing::error!("rendering error: {}", err);
+            Error::Internal(format!("rendering error: {}", err))
+        })?;
+    tracing::debug!("newton-rendered");
 
     Ok(image)
 }

@@ -6,13 +6,14 @@ use num::BigRational;
 
 pub mod mandelbrot;
 pub mod masked_float;
+pub mod newton;
 mod numeric;
+mod number;
 
 pub use numeric::FromRational;
 
-
 /// Rendering-request parameters, common across renderables.
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub struct CommonParams {
     /// Rendered size, in pixels
     pub size: Size,
@@ -29,24 +30,24 @@ pub struct CommonParams {
 
 /// Fractal-specific rendering parameters.
 #[non_exhaustive]
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub enum FractalParams {
-    Mandelbrot{
-        iters: usize,
-    },
+    Mandelbrot { iters: usize },
+    Newton { iters: usize },
 }
 
 impl FractalParams {
     pub fn name(&self) -> &'static str {
         match self {
-            FractalParams::Mandelbrot{..} => "mandelbrot",
+            FractalParams::Mandelbrot { .. } => "mandelbrot",
+            FractalParams::Newton { .. } => "newton",
         }
     }
 }
 
 /// Request for rendering a fractal.
-#[derive(Debug,Clone)]
-pub struct RenderRequest{
+#[derive(Debug, Clone)]
+pub struct RenderRequest {
     pub common: CommonParams,
     pub fractal: FractalParams,
 }
@@ -61,7 +62,7 @@ pub struct Size {
 pub mod image;
 
 /// Escape term: on what iteration the escape occurred, and with what value.
-#[derive(Copy,Clone,Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct Escape {
     pub count: usize,
     pub z_magnitude_squared: f64,
@@ -70,4 +71,12 @@ pub struct Escape {
 /// Shorthand for "the escapes for this region"
 pub type EscapeVector = Vec<Option<Escape>>;
 
+/// Zero term: Which zero was reached, and how many iterations it took
+#[derive(Copy, Clone, Debug)]
+pub struct Zero {
+    pub count: usize,
+    pub zero: usize,
+}
 
+/// Shorthand for "the zeros for this region"
+pub type ZeroVector = Vec<Option<Zero>>;

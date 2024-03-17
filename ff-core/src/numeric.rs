@@ -1,4 +1,4 @@
-use std::ops::{Add, Mul, Sub, Div};
+use std::ops::{Add, Div, Mul, Sub};
 
 use num::{BigRational, ToPrimitive};
 
@@ -66,6 +66,28 @@ where
         let im = <N as MandelbrotNumber>::two() * (self.re * self.im);
         Self { re, im }
     }
+
+    /// Reports if two complex numbers are near each other.
+    ///
+    /// Near is defined as:
+    ///   If the distance between the two is less than the magnitude of larger number divided by
+    ///   'threshold', then the numbers are near.
+    ///
+    /// It's defined this way to avoid having to reason more carefully about epsilon for the
+    /// various formats.
+    ///
+    /// Based on this blog post, where the method is called "not bad" and says it "mostly" works.
+    /// https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
+    pub fn near(&self, rhs: Complex<N>, nb: Complex<N>, threshold: N) -> bool {
+        let nearby = (nb.re.clone() * nb.re.clone() + nb.im.clone() * nb.im.clone())/threshold;
+        let mag_self = self.re.clone() * self.re.clone() + self.im.clone() * self.im.clone();
+        let mag_rhs = rhs.re.clone() * rhs.re.clone() + rhs.im.clone() * rhs.im.clone();
+        let dre = self.re.clone() - rhs.re.clone();
+        let dim = self.im.clone() - rhs.im.clone();
+        let distance = dre.clone() * dre + dim.clone() * dim;
+        //println!("s: {:?} rhs: {:?} d: {:?} t: {:?}", mag_self, mag_rhs, distance, nearby);
+        return distance < nearby;
+    }
 }
 
 impl<N> Mul<Complex<N>> for Complex<N>
@@ -98,7 +120,7 @@ where
         let (c, d) = (rhs.re, rhs.im);
         let re: N = (a.clone() * c.clone() + b.clone() * d.clone())
             / (c.clone() * c.clone() + d.clone() * d.clone());
-        let im: N = (b.clone() * c.clone() + a.clone() * d.clone())
+        let im: N = (b.clone() * c.clone() - a.clone() * d.clone())
             / (c.clone() * c.clone() + d.clone() * d.clone());
         Self { re, im }
     }
@@ -131,8 +153,6 @@ where
         }
     }
 }
-
-
 
 impl<N> Add<&Complex<N>> for Complex<N>
 where

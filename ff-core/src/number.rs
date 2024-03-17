@@ -39,6 +39,10 @@ pub trait MandelbrotNumber:
         Self::two() + Self::two()
     }
 
+    // Provides a way to turn an int into this type.
+    // TODO: Replace zero/one/two/four with this method?
+    fn from_i32(i: i32) -> Self;
+
     // Provides a way to get a f64 from this type.
     fn to_f64(self) -> f64;
 }
@@ -63,6 +67,10 @@ impl MandelbrotNumber for f32 {
     fn to_f64(self) -> f64 {
         self.into()
     }
+
+    fn from_i32(i: i32) -> Self {
+        i as f32
+    }
 }
 
 impl MandelbrotNumber for f64 {
@@ -85,6 +93,10 @@ impl MandelbrotNumber for f64 {
     fn to_f64(self) -> f64 {
         self
     }
+
+    fn from_i32(i: i32) -> Self {
+        i.into()
+    }
 }
 
 impl MandelbrotNumber for BigRational {
@@ -102,6 +114,10 @@ impl MandelbrotNumber for BigRational {
     }
     fn to_f64(self) -> f64 {
         ToPrimitive::to_f64(&self).unwrap()
+    }
+
+    fn from_i32(i: i32) -> Self {
+        BigRational::new(i.into(), 1.into())
     }
 }
 
@@ -124,6 +140,10 @@ impl<const E: usize, const F: usize> MandelbrotNumber for MaskedFloat<E, F> {
 
     fn to_f64(self) -> f64 {
         self.into()
+    }
+
+    fn from_i32(i: i32) -> Self {
+        MaskedFloat::<E, F>::new(i.into())
     }
 }
 
@@ -148,6 +168,10 @@ macro_rules! impl_fixed {
 
             fn to_f64(self) -> f64 {
                 self.into()
+            }
+
+            fn from_i32(i: i32) -> Self {
+                Self::unwrapped_from_num(i)
             }
         }
 
@@ -237,14 +261,16 @@ impl FromRational for softposit::P32 {
                 bytes
             };
             // For whatever reason... the softposit appears to track words in reverse order?
-            let words : Vec<u64> = bytes.as_slice()
-            .chunks_exact(size_of::<u64>())
-            .map(|chunk| {
-                let mut word = [0u8; 8];
-                word.copy_from_slice(chunk);
-                u64::from_le_bytes(word)
-            })
-            .rev().collect();
+            let words: Vec<u64> = bytes
+                .as_slice()
+                .chunks_exact(size_of::<u64>())
+                .map(|chunk| {
+                    let mut word = [0u8; 8];
+                    word.copy_from_slice(chunk);
+                    u64::from_le_bytes(word)
+                })
+                .rev()
+                .collect();
 
             let mut quire_words = [0u64; QUIRE_WORD_COUNT];
             quire_words.copy_from_slice(&words);
@@ -290,11 +316,15 @@ macro_rules! impl_posit {
                 Self::from_i8(4)
             }
 
+            fn from_i32(i: i32) -> Self {
+                Self::from_i32(i)
+            }
+
             fn to_f64(self) -> f64 {
                 self.into()
             }
         }
-    }
+    };
 }
 
 impl_posit!(softposit::P32);
@@ -372,7 +402,7 @@ mod tests {
     #[test]
     fn test_p32_constants() {
         const ZERO: P32 = P32::from_f32(0.0);
-        const ONE : P32 = P32::from_f32(1.0);
+        const ONE: P32 = P32::from_f32(1.0);
         const NEG: P32 = P32::from_f32(-1.0);
         let zero = BigRational::new(0.into(), 1.into());
         let one = BigRational::new(1.into(), 1.into());
@@ -384,7 +414,7 @@ mod tests {
 
     #[test]
     fn test_p32_small() {
-        const SMALL : P32 = P32::from_f32(1.0 / 16.0);
+        const SMALL: P32 = P32::from_f32(1.0 / 16.0);
         let small = BigRational::new(1.into(), 16.into());
         assert_eq!(P32::from_bigrational(&small).unwrap(), SMALL);
     }

@@ -67,14 +67,18 @@ impl NewtonRenderer {
             ));
         }
 
+        //println!("Data is: {:?}", data);
+
         let max = data.iter().fold(usize::MIN, |max, v| match v {
             None => max,
             Some(Zero { count: _, zero }) => std::cmp::max(max, *zero),
         });
 
+        //println!("Max is {}", max);
+
         let pixel_values = data.into_iter().map(|v| match v {
             None => image::Rgb([0, 0, 0]),
-            Some(Zero { count: _, zero }) => value_to_rgb(0, max, zero, 4.0),
+            Some(Zero { count: _, zero }) => value_to_rgb(0, max+1, zero, 4.0),
         });
 
         let mut img =

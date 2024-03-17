@@ -5,9 +5,9 @@ use std::ops::Range;
 /// parameterized on a numeric type.
 use crate::{masked_float::MaskedFloat, numeric::Complex, CommonParams};
 
+pub use crate::number::MandelbrotNumber;
 use crate::{Escape, EscapeVector};
 use num::BigRational;
-pub use crate::number::MandelbrotNumber;
 
 /// Function pointer for evaluating escape counts
 type EscapeFn = fn(&CommonParams, usize) -> Result<EscapeVector, String>;

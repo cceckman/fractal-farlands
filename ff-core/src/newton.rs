@@ -7,6 +7,7 @@ use std::ops::Range;
 use crate::{masked_float::MaskedFloat, numeric::Complex, CommonParams};
 
 pub use crate::number::MandelbrotNumber;
+pub use crate::number::MandelbrotNumber;
 use crate::{Zero, ZeroVector};
 use num::BigRational;
 
@@ -16,12 +17,12 @@ type EscapeFn = fn(&CommonParams, usize) -> Result<ZeroVector, String>;
 const FUNCTIONS: &[(&'static str, EscapeFn)] = &[
     ("f32", evaluate_parallel_numeric::<f32>),
     ("f64", evaluate_parallel_numeric::<f64>),
-    /*("P32", evaluate_parallel_numeric::<softposit::P32>),
+    ("P32", evaluate_parallel_numeric::<softposit::P32>),
     ("P16", evaluate_parallel_numeric::<softposit::P16>),
-    ("P8", evaluate_parallel_numeric::<softposit::P8>),*/
-    ("MaskedFloat<3,50>", evaluate_parallel_numeric::<MaskedFloat<3, 50>>),
+    // P8 and MaskedFloat<3,50> don't produce interesting images, mostly fail to converge.
+    //("P8", evaluate_parallel_numeric::<softposit::P8>),
+    //("MaskedFloat<3,50>", evaluate_parallel_numeric::<MaskedFloat<3, 50>>),
     ("MaskedFloat<4,50>", evaluate_parallel_numeric::<MaskedFloat<4, 50>>),
-    //("I11F5", evaluate_parallel_numeric::<fixed::types::I11F5>),
 ];
 
 /// List the numeric formats that are valid for rendering.
@@ -69,9 +70,8 @@ where
     let out_rows = zeros.chunks_mut(size.width);
     ys.into_iter()
         .zip(out_rows)
-        //.par_bridge()
-        //.into_par_iter()
-        .into_iter()
+        .par_bridge()
+        .into_par_iter()
         .for_each(|(y, row_out)| {
             xs.iter().zip(row_out).for_each(|(x, out)| {
                 *out = find_zero(x, &y, iterations);
@@ -79,11 +79,31 @@ where
         });
 
     let mut zero_index: Vec<Complex<N>> = Vec::new();
+    let mut zero_index: Vec<Complex<N>> = Vec::new();
 
     Ok(zeros
         .into_iter()
         .map(|x| match x {
+    Ok(zeros
+        .into_iter()
+        .map(|x| match x {
             None => None,
+            Some((z, iters)) => match zero_index.iter().position(|x| (*x).near(z.clone(), z.clone(), N::from_i32(512))) {
+                None => {
+                    let nz = zero_index.len();
+                    zero_index.push(z);
+                    Some(Zero {
+                        count: iters,
+                        zero: nz,
+                    })
+                }
+                Some(n) => Some(Zero {
+                    count: iters,
+                    zero: n,
+                }),
+            },
+        })
+        .collect())
             Some((z, iters)) => match zero_index.iter().position(|x| (*x).near(z.clone(), z.clone(), N::from_i32(512))) {
                 None => {
                     let nz = zero_index.len();
@@ -127,11 +147,7 @@ where
         im: N::zero(),
     };
 
-    //let three: N = N::from_i32(3);
-    //let six: N = N::from_i32(6);
-
     for i in 0..limit {
-        //println!("Z[{}]: re: {:?} im: {:?}", i, z.re, z.im);
         // For the z^3-1 Newton's fractal, first, check if the value is zero at the
         // current position--if so, we're done.
         //
@@ -142,24 +158,12 @@ where
         //
         // TODO: The function and its derivative could come in as lambdas.
         let fz = z.clone() * z.clone() * z.clone() - one.clone();
-        //println!("FZ  re: {:?} im: {:?}", fz.re, fz.im);
-        //
-        // NOTE: I think this might be wrong...
         let fpz = three.clone() * z.clone() * z.clone();
-        /*let fpz = Complex {
-            re: three.clone() * z.re.clone() * z.re.clone()
-                - six.clone() * z.im.clone() * z.im.clone(),
-            im: six.clone() * z.re.clone() * z.re.clone()
-                - three.clone() * z.im.clone() * z.im.clone(),
-        };*/
-        //println!("FPZ re: {:?} im: {:?}", fpz.re, fpz.im);
+        if fpz.re.clone() * fpz.re.clone() + fpz.im.clone() * fpz.im.clone() == N::zero() {
+            return None;
+        }
         let del = fz.clone() / fpz;
-        //println!("Del re: {:?} im: {:?}", del.re, del.im);
-        //
-        // NOTE: This won't work in general. Should do a "near zero" method
         if fz.near(zero.clone(), z.clone(), N::from_i32(1024)) {
-            //println!("Done");
-            //println!("Done: Z[{}]: re: {:?} im: {:?}", i, z.re, z.im);
             return Some((z, i));
         }
         z = z - del;

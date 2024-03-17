@@ -141,14 +141,18 @@ where
         //
         // TODO: The function and its derivative could come in as lambdas.
         let fz = z.clone() * z.clone() * z.clone() - one.clone();
-        //println!("FZ  re: {:?} im: {:?}", fz.re, fz.im);
+        //println!("FZ  re: {:?} im: {:?}", fz.re, fz.im); 
+        //
+        // NOTE: I think this might be wrong...
         let fpz = three.clone() * z.clone().square();
         //println!("FPZ re: {:?} im: {:?}", fpz.re, fpz.im);
         let del = fz.clone()/fpz;
         //println!("Del re: {:?} im: {:?}", del.re, del.im);
+        // 
+        // NOTE: This won't work in general. Should do a "near zero" method
         if fz == zero {
             //println!("Done");
-            println!("Z[{}]: re: {:?} im: {:?}", i, z.re, z.im);
+            //println!("Z[{}]: re: {:?} im: {:?}", i, z.re, z.im);
             return Some((z, i));
         }
         z = z - del;

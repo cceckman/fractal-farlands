@@ -7,7 +7,6 @@ use std::ops::Range;
 use crate::{masked_float::MaskedFloat, numeric::Complex, CommonParams};
 
 pub use crate::number::MandelbrotNumber;
-pub use crate::number::MandelbrotNumber;
 use crate::{Zero, ZeroVector};
 use num::BigRational;
 
@@ -79,31 +78,11 @@ where
         });
 
     let mut zero_index: Vec<Complex<N>> = Vec::new();
-    let mut zero_index: Vec<Complex<N>> = Vec::new();
 
     Ok(zeros
         .into_iter()
         .map(|x| match x {
-    Ok(zeros
-        .into_iter()
-        .map(|x| match x {
             None => None,
-            Some((z, iters)) => match zero_index.iter().position(|x| (*x).near(z.clone(), z.clone(), N::from_i32(512))) {
-                None => {
-                    let nz = zero_index.len();
-                    zero_index.push(z);
-                    Some(Zero {
-                        count: iters,
-                        zero: nz,
-                    })
-                }
-                Some(n) => Some(Zero {
-                    count: iters,
-                    zero: n,
-                }),
-            },
-        })
-        .collect())
             Some((z, iters)) => match zero_index.iter().position(|x| (*x).near(z.clone(), z.clone(), N::from_i32(512))) {
                 None => {
                     let nz = zero_index.len();

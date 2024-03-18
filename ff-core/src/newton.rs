@@ -21,7 +21,10 @@ const FUNCTIONS: &[(&'static str, EscapeFn)] = &[
     // P8 and MaskedFloat<3,50> don't produce interesting images, mostly fail to converge.
     //("P8", evaluate_parallel_numeric::<softposit::P8>),
     //("MaskedFloat<3,50>", evaluate_parallel_numeric::<MaskedFloat<3, 50>>),
-    ("MaskedFloat<4,50>", evaluate_parallel_numeric::<MaskedFloat<4, 50>>),
+    (
+        "MaskedFloat<4,50>",
+        evaluate_parallel_numeric::<MaskedFloat<4, 50>>,
+    ),
 ];
 
 /// List the numeric formats that are valid for rendering.
@@ -83,7 +86,10 @@ where
         .into_iter()
         .map(|x| match x {
             None => None,
-            Some((z, iters)) => match zero_index.iter().position(|x| (*x).near(z.clone(), z.clone(), N::from_i32(512))) {
+            Some((z, iters)) => match zero_index
+                .iter()
+                .position(|x| (*x).near(z.clone(), z.clone(), N::from_i32(512)))
+            {
                 None => {
                     let nz = zero_index.len();
                     zero_index.push(z);

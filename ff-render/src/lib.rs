@@ -80,21 +80,15 @@ fn dispatch(pool: rayon::ThreadPool, receiver: Receiver<ImageRequest>) {
     for req in receiver.iter() {
         // spawn_fifo so that images complete in ~the same order as requested;
         // we don't want partially-rendered images.
-        pool.spawn_fifo({
-            || render(req)
-        })
+        pool.spawn_fifo({ || render(req) })
     }
 }
 
 fn render(req: ImageRequest) {
     let ImageRequest { request, result } = req;
     let res = match request.fractal {
-        ff_core::FractalParams::Mandelbrot { iters } => {
-            mandelbrot_render(request.common, iters)
-        }
-        ff_core::FractalParams::Newton { iters } => {
-            newton_render(request.common, iters)
-        }
+        ff_core::FractalParams::Mandelbrot { iters } => mandelbrot_render(request.common, iters),
+        ff_core::FractalParams::Newton { iters } => newton_render(request.common, iters),
         _ => Err(Error::InvalidArgument("unknown fractal".to_owned())),
     };
     result.send(res);
@@ -110,8 +104,8 @@ fn mandelbrot_render(
     let _guard = span.enter();
     let size = request.size.clone();
 
-    let output = ff_core::mandelbrot::compute(&request, iters)
-        .map_err(|msg| Error::Internal(msg))?;
+    let output =
+        ff_core::mandelbrot::compute(&request, iters).map_err(|msg| Error::Internal(msg))?;
     tracing::debug!("mandelbrot-computed");
 
     let image = ff_core::image::Renderer {}
@@ -135,8 +129,7 @@ fn newton_render(
     let _guard = span.enter();
     let size = request.size.clone();
 
-    let output = ff_core::newton::compute(&request, iters)
-        .map_err(|msg| Error::Internal(msg))?;
+    let output = ff_core::newton::compute(&request, iters).map_err(|msg| Error::Internal(msg))?;
     tracing::debug!("newton-computed");
 
     let image = ff_core::image::NewtonRenderer {}

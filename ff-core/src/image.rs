@@ -78,7 +78,7 @@ impl NewtonRenderer {
 
         let pixel_values = data.into_iter().map(|v| match v {
             None => image::Rgb([0, 0, 0]),
-            Some(Zero { count: _, zero }) => value_to_rgb(0, max+1, zero, 4.0),
+            Some(Zero { count: _, zero }) => value_to_rgb(0, max + 1, zero, 4.0),
         });
 
         let mut img =

@@ -71,7 +71,6 @@ impl MandelbrotNumber for f32 {
     fn from_i32(i: i32) -> Self {
         i as f32
     }
-
 }
 
 impl MandelbrotNumber for f64 {

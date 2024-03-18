@@ -3,7 +3,7 @@ use axum::http::{header, HeaderName, StatusCode};
 use axum::response::{IntoResponse, Result};
 
 pub async fn get_index() -> StaticResponse {
-    const INDEX : &'static str = include_str!("static/index.html");
+    const INDEX: &'static str = include_str!("static/index.html");
     (headers("text/html"), INDEX)
 }
 
@@ -15,13 +15,10 @@ pub async fn get(Path(file): Path<String>) -> Result<impl IntoResponse> {
     }
 }
 
-
 type StaticHeaders = [(HeaderName, &'static str); 1];
 
 const fn headers(content_type: &'static str) -> StaticHeaders {
-    [
-        (header::CONTENT_TYPE, content_type)
-    ]
+    [(header::CONTENT_TYPE, content_type)]
 }
 
 type StaticResponse = (StaticHeaders, &'static str);

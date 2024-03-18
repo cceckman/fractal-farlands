@@ -33,7 +33,10 @@ pub fn root_routes() -> Result<axum::Router, String> {
     tracing::info!("constructing router");
     Ok(Router::new()
         .route("/", get(static_content::get_index))
-        .nest("/mandelbrot/", mandelbrot::router(ff_render::RenderServer::new()?))
+        .nest(
+            "/mandelbrot/",
+            mandelbrot::router(ff_render::RenderServer::new()?),
+        )
         .nest("/newton/", newton::router(ff_render::RenderServer::new()?))
         .route("/static/:file", get(static_content::get)))
 }

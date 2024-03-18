@@ -69,7 +69,7 @@ async fn interface(uri: OriginalUri, Query(query): Query<WindowParams>) -> Marku
 fn interface_body(query_str: &str, query: &WindowParams) -> Markup {
     html! {
         form id="form-rerender" action="." autocomplete="off" class="parameters" {
-            h1 { 
+            h1 {
                 a href="/" { "Fractal Farlands" }
                 "- newton"
             }

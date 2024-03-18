@@ -18,13 +18,16 @@ fn main() {
                 "debug,axum::rejection=trace".into()
             }),
         )
-        .with(tracing_subscriber::fmt::layer()
-    )
+        .with(tracing_subscriber::fmt::layer())
         .init();
 
     let trace = TraceLayer::new_for_http().make_span_with(|request: &Request<_>| {
         // Log the path and query string
-        let query = request.uri().path_and_query().map(|v| v.as_str()).unwrap_or("");
+        let query = request
+            .uri()
+            .path_and_query()
+            .map(|v| v.as_str())
+            .unwrap_or("");
         tracing::info_span!(
             "http_request",
             method = ?request.method(),
@@ -33,8 +36,10 @@ fn main() {
     });
 
     let server = async move {
-        let app = root_routes().expect("failed to start rendering pool").layer(trace);
-        const ADDR : &str = "0.0.0.0:3000";
+        let app = root_routes()
+            .expect("failed to start rendering pool")
+            .layer(trace);
+        const ADDR: &str = "0.0.0.0:3000";
         let listener = tokio::net::TcpListener::bind(ADDR).await?;
         tracing::info!("listening at {:?}", ADDR);
         axum::serve(listener, app).await

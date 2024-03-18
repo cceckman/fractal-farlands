@@ -79,7 +79,7 @@ where
     /// Based on this blog post, where the method is called "not bad" and says it "mostly" works.
     /// https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
     pub fn near(&self, rhs: Complex<N>, nb: Complex<N>, threshold: N) -> bool {
-        let nearby = (nb.re.clone() * nb.re.clone() + nb.im.clone() * nb.im.clone())/threshold;
+        let nearby = (nb.re.clone() * nb.re.clone() + nb.im.clone() * nb.im.clone()) / threshold;
         let dre = self.re.clone() - rhs.re.clone();
         let dim = self.im.clone() - rhs.im.clone();
         let distance = dre.clone() * dre + dim.clone() * dim;

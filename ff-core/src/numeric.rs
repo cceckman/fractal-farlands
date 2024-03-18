@@ -1,5 +1,4 @@
 use std::ops::{Add, Div, Mul, Sub};
-use std::ops::{Add, Div, Mul, Sub};
 
 use num::{BigRational, ToPrimitive};
 
@@ -118,7 +117,6 @@ where
         let (c, d) = (rhs.re, rhs.im);
         let re: N = (a.clone() * c.clone() + b.clone() * d.clone())
             / (c.clone() * c.clone() + d.clone() * d.clone());
-        let im: N = (b.clone() * c.clone() - a.clone() * d.clone())
         let im: N = (b.clone() * c.clone() - a.clone() * d.clone())
             / (c.clone() * c.clone() + d.clone() * d.clone());
         Self { re, im }

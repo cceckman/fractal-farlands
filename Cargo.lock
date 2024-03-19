@@ -327,6 +327,7 @@ name = "ff-core"
 version = "0.1.0"
 dependencies = [
  "fixed",
+ "hsv",
  "image",
  "num",
  "rayon",
@@ -526,6 +527,12 @@ name = "hermit-abi"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bd5256b483761cd23699d0da46cc6fd2ee3be420bbe6d020ae4a091e70b7e9fd"
+
+[[package]]
+name = "hsv"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a03664f940932e7453c5f1dd0ce278a7af2ff47d440fad00f679b4f5bf0da869"
 
 [[package]]
 name = "http"

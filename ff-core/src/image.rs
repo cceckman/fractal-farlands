@@ -101,11 +101,16 @@ impl NewtonRenderer {
             })
             .collect();
         let len = sort_data.len();
-        let (_, high_iters, _) = sort_data.select_nth_unstable((len as f64 * 0.9) as usize);
+        let high_iters = if sort_data.len() > 0 {
+            let (_, high_iters, _) = sort_data.select_nth_unstable((len as f64 * 0.9) as usize);
+            *high_iters
+        } else {
+            10000000
+        };
 
         let pixel_values = data.into_iter().map(|v| match v {
             None => image::Rgb([0, 0, 0]),
-            Some(Zero { count, zero }) => newton_to_rgb(max_zero + 1, zero, *high_iters, count),
+            Some(Zero { count, zero }) => newton_to_rgb(max_zero + 1, zero, high_iters, count),
         });
 
         let mut img =

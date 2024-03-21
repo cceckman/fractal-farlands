@@ -1,5 +1,5 @@
 use rayon::prelude::*;
-use std::ops::Range;
+use std::{ops::Range, panic::AssertUnwindSafe};
 
 // Implementation of Newton's fractal for z^3-1
 // TODO:
@@ -75,9 +75,14 @@ where
         .par_bridge()
         .into_par_iter()
         .for_each(|(y, row_out)| {
-            xs.iter().zip(row_out).for_each(|(x, out)| {
-                *out = find_zero(x, &y, iterations);
-            })
+            let result = std::panic::catch_unwind(AssertUnwindSafe(|| {
+                xs.iter().zip(row_out).for_each(|(x, out)| {
+                    *out = find_zero(x, &y, iterations);
+                })
+            }));
+            if result.is_err() {
+                tracing::error!("caught panic during mandelbrot evaluation");
+            }
         });
 
     let mut zero_index: Vec<Complex<N>> = Vec::new();

@@ -1,5 +1,5 @@
 use rayon::prelude::*;
-use std::ops::Range;
+use std::{ops::Range, panic::AssertUnwindSafe};
 
 /// Implementation of the Mandelbrot fractal,
 /// parameterized on a numeric type.
@@ -84,9 +84,15 @@ where
         .par_bridge()
         .into_par_iter()
         .for_each(|(y, row_out)| {
-            xs.iter().zip(row_out).for_each(|(x, out)| {
-                *out = escape(x, &y, iterations);
-            })
+            // Catch the unwind before it makes it out of the Rayon worker thread.
+            let result = std::panic::catch_unwind(AssertUnwindSafe(|| {
+                xs.iter().zip(row_out).for_each(|(x, out)| {
+                    *out = escape(x, &y, iterations);
+                })
+            }));
+            if result.is_err() {
+                tracing::error!("caught panic during mandelbrot evaluation");
+            }
         });
 
     Ok(output)

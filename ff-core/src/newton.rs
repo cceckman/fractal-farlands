@@ -5,14 +5,14 @@ use std::{ops::Range, panic::AssertUnwindSafe};
 // Implementation of Newton's fractal for z^3-1
 // TODO:
 //   Parameterize to other functions
-use crate::{masked_float::MaskedFloat, numeric::Complex, CommonParams};
+use crate::{masked_float::MaskedFloat, numeric::Complex, CancelContext, CommonParams};
 
 pub use crate::number::FractalNumber;
 use crate::{Zero, ZeroVector};
 use num::BigRational;
 
 /// Function pointer for evaluating zeros
-type EscapeFn = fn(&CommonParams, usize) -> Result<ZeroVector, String>;
+type EscapeFn = fn(&dyn CancelContext, &CommonParams, usize) -> Result<ZeroVector, String>;
 
 const FUNCTIONS: &[(&'static str, EscapeFn)] = &[
     ("f32", evaluate_parallel_numeric::<f32>),
@@ -35,12 +35,12 @@ pub fn formats() -> impl Iterator<Item = &'static str> {
     FUNCTIONS.iter().map(|(name, _)| *name)
 }
 
-pub fn compute(params: &CommonParams, iterations: usize) -> Result<ZeroVector, String> {
+pub fn compute(ctx: &dyn CancelContext, params: &CommonParams, iterations: usize) -> Result<ZeroVector, String> {
     let fmt = params.numeric.as_str();
     // Linear scan, we don't have that many options:
     for (candidate, computer) in FUNCTIONS.iter() {
         if *candidate == fmt {
-            return computer(params, iterations);
+            return computer(ctx, params, iterations);
         }
     }
 
@@ -48,6 +48,7 @@ pub fn compute(params: &CommonParams, iterations: usize) -> Result<ZeroVector, S
 }
 
 fn evaluate_parallel_numeric<N>(
+    ctx: &dyn CancelContext,
     params: &CommonParams,
     iterations: usize,
 ) -> Result<ZeroVector, String>
@@ -78,6 +79,10 @@ where
         .par_bridge()
         .into_par_iter()
         .for_each(|(y, row_out)| {
+            if ctx.is_canceled() {
+                return
+            }
+
             let result = std::panic::catch_unwind(AssertUnwindSafe(|| {
                 xs.iter().zip(row_out).for_each(|(x, out)| {
                     *out = find_zero(x, &y, iterations);
@@ -89,6 +94,10 @@ where
         });
 
     let mut zero_index: Vec<Complex<N>> = Vec::new();
+
+    if ctx.is_canceled() {
+        return Err("canceled".to_string())
+    }
 
     Ok(zeros
         .into_iter()

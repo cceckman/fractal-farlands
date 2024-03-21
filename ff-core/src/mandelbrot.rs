@@ -3,14 +3,14 @@ use std::{ops::Range, panic::AssertUnwindSafe};
 
 /// Implementation of the Mandelbrot fractal,
 /// parameterized on a numeric type.
-use crate::{masked_float::MaskedFloat, numeric::Complex, CommonParams};
+use crate::{masked_float::MaskedFloat, numeric::Complex, CancelContext, CommonParams};
 
 pub use crate::number::FractalNumber;
 use crate::{Escape, EscapeVector};
 use num::BigRational;
 
 /// Function pointer for evaluating escape counts
-type EscapeFn = fn(&CommonParams, usize) -> Result<EscapeVector, String>;
+type EscapeFn = fn( &dyn CancelContext, &CommonParams, usize) -> Result<EscapeVector, String>;
 
 /// Pointers, by numeric format name:
 const FUNCTIONS: &[(&'static str, EscapeFn)] = &[
@@ -41,12 +41,12 @@ pub fn formats() -> impl Iterator<Item = &'static str> {
 ///
 /// Under the hood, this uses Rayon's par_iter, so it's recommended to launch it from a Rayon
 /// thread-pool.
-pub fn compute(params: &CommonParams, iterations: usize) -> Result<EscapeVector, String> {
+pub fn compute(ctx: &dyn CancelContext, params: &CommonParams, iterations: usize) -> Result<EscapeVector, String> {
     let fmt = params.numeric.as_str();
     // Linear scan, we don't have that many options:
     for (candidate, computer) in FUNCTIONS.iter() {
         if *candidate == fmt {
-            return computer(params, iterations);
+            return computer(ctx, params, iterations);
         }
     }
 
@@ -54,6 +54,7 @@ pub fn compute(params: &CommonParams, iterations: usize) -> Result<EscapeVector,
 }
 
 fn evaluate_parallel_numeric<N>(
+    ctx: &dyn CancelContext,
     params: &CommonParams,
     iterations: usize,
 ) -> Result<EscapeVector, String>
@@ -84,6 +85,9 @@ where
         .par_bridge()
         .into_par_iter()
         .for_each(|(y, row_out)| {
+            if ctx.is_canceled() {
+                return;
+            }
             // Catch the unwind before it makes it out of the Rayon worker thread.
             let result = std::panic::catch_unwind(AssertUnwindSafe(|| {
                 xs.iter().zip(row_out).for_each(|(x, out)| {
@@ -94,8 +98,13 @@ where
                 tracing::error!("caught panic during mandelbrot evaluation");
             }
         });
+    if ctx.is_canceled() {
+        Err("canceled".to_string())
+    } else {
 
-    Ok(output)
+        Ok(output)
+    }
+
 }
 
 #[inline]

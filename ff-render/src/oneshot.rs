@@ -30,9 +30,9 @@ pub struct Sender<T> {
     shared: Arc<Sync<T>>,
 }
 
-impl<T> Sender<T> {
+impl<T> ff_core::CancelContext for Sender<T> where T: Send {
     /// Returns true if the receiver has hung up.
-    pub fn is_cancelled(&self) -> bool {
+    fn is_canceled(&self) -> bool {
         let g = match self.shared.state.lock() {
             Err(_) => return true,
             Ok(v) => v,
@@ -43,7 +43,9 @@ impl<T> Sender<T> {
             false
         }
     }
+}
 
+impl<T> Sender<T> {
     /// Sends the provided value.
     pub fn send(self, value: T) {
         let mut g = match self.shared.state.lock() {

@@ -47,7 +47,7 @@ impl FromRational for BigRational {
 
 /// Complex number implementation.
 /// A little more granular than num_traits, because we're only interested in certain ops.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Complex<N> {
     pub re: N,
     pub im: N,
@@ -102,6 +102,44 @@ where
         let re: N = (a.clone() * c.clone()) - (b.clone() * d.clone());
         let im: N = a * d + b * c;
         Self { re, im }
+    }
+}
+
+impl<N> Mul<&Complex<N>> for &Complex<N>
+where
+    N: Add<N, Output = N> + Sub<N, Output = N> + Mul<N, Output = N>,
+    for<'a> &'a N: Add<&'a N, Output = N> + Sub<&'a N, Output = N> + Mul<&'a N, Output = N>,
+{
+    type Output = Complex<N>;
+
+    fn mul(self, rhs: &Complex<N>) -> Complex<N> {
+        // (a + ib) * (c + id)
+        // = ac + aid + (ibc + i^2 bd)      (FOIL)
+        // = (ac - bd) + i(ad + bc)         (turning i^2 into -1, combining real/imaginary terms)
+        let (a, b) = (&self.re, &self.im);
+        let (c, d) = (&rhs.re, &rhs.im);
+        let re: N = (a * c) - (b * d);
+        let im: N = a * d + b * c;
+        Complex { re, im }
+    }
+}
+
+impl<N> Mul<&Complex<N>> for Complex<N>
+where
+    N: Add<N, Output = N> + Sub<N, Output = N> + Mul<N, Output = N>,
+    for<'a> &'a N: Add<&'a N, Output = N> + Sub<&'a N, Output = N> + Mul<&'a N, Output = N>,
+{
+    type Output = Complex<N>;
+
+    fn mul(self, rhs: &Complex<N>) -> Complex<N> {
+        // (a + ib) * (c + id)
+        // = ac + aid + (ibc + i^2 bd)      (FOIL)
+        // = (ac - bd) + i(ad + bc)         (turning i^2 into -1, combining real/imaginary terms)
+        let (a, b) = (&self.re, &self.im);
+        let (c, d) = (&rhs.re, &rhs.im);
+        let re: N = (a * c) - (b * d);
+        let im: N = a * d + b * c;
+        Complex { re, im }
     }
 }
 

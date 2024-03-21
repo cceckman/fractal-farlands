@@ -14,7 +14,7 @@ use crate::{masked_float::MaskedFloat, numeric::FromRational};
 /// - Addition, subtraction, multiplication - to implement complex numbers and the Mandelbrot image
 /// - Constants zero and four - for initializing the image (zero) and bounds-checking (four)
 /// - Comparison - for bounds-checking
-pub trait MandelbrotNumber:
+pub trait FractalNumber:
     Sized
     + Add<Self, Output = Self>
     + Sub<Self, Output = Self>
@@ -25,45 +25,14 @@ pub trait MandelbrotNumber:
     + FromRational
     + std::fmt::Debug
 {
-    // Provides this type's representation of zero.
-    fn zero() -> Self;
-
-    // Provides this type's representation of one.
-    fn one() -> Self;
-
-    // Provides this type's representation of two.
-    fn two() -> Self;
-
-    // Provides this type's representation of four.
-    fn four() -> Self {
-        Self::two() + Self::two()
-    }
-
     // Provides a way to turn an int into this type.
-    // TODO: Replace zero/one/two/four with this method?
     fn from_i32(i: i32) -> Self;
 
     // Provides a way to get a f64 from this type.
     fn to_f64(self) -> f64;
 }
 
-impl MandelbrotNumber for f32 {
-    fn zero() -> Self {
-        0f32
-    }
-
-    fn one() -> Self {
-        1f32
-    }
-
-    fn two() -> Self {
-        2f32
-    }
-
-    fn four() -> Self {
-        4f32
-    }
-
+impl FractalNumber for f32 {
     fn to_f64(self) -> f64 {
         self.into()
     }
@@ -73,23 +42,7 @@ impl MandelbrotNumber for f32 {
     }
 }
 
-impl MandelbrotNumber for f64 {
-    fn zero() -> Self {
-        0f64
-    }
-
-    fn one() -> Self {
-        1f64
-    }
-
-    fn two() -> Self {
-        2f64
-    }
-
-    fn four() -> Self {
-        4f64
-    }
-
+impl FractalNumber for f64 {
     fn to_f64(self) -> f64 {
         self
     }
@@ -99,19 +52,7 @@ impl MandelbrotNumber for f64 {
     }
 }
 
-impl MandelbrotNumber for BigRational {
-    fn zero() -> Self {
-        BigRational::new(0.into(), 1.into())
-    }
-    fn one() -> Self {
-        BigRational::new(1.into(), 1.into())
-    }
-    fn two() -> Self {
-        BigRational::new(2.into(), 1.into())
-    }
-    fn four() -> Self {
-        BigRational::new(4.into(), 1.into())
-    }
+impl FractalNumber for BigRational {
     fn to_f64(self) -> f64 {
         ToPrimitive::to_f64(&self).unwrap()
     }
@@ -121,23 +62,7 @@ impl MandelbrotNumber for BigRational {
     }
 }
 
-impl<const E: usize, const F: usize> MandelbrotNumber for MaskedFloat<E, F> {
-    fn zero() -> Self {
-        MaskedFloat::<E, F>::new(0.0)
-    }
-
-    fn one() -> Self {
-        MaskedFloat::<E, F>::new(1.0)
-    }
-
-    fn two() -> Self {
-        MaskedFloat::<E, F>::new(2.0)
-    }
-
-    fn four() -> Self {
-        MaskedFloat::<E, F>::new(4.0)
-    }
-
+impl<const E: usize, const F: usize> FractalNumber for MaskedFloat<E, F> {
     fn to_f64(self) -> f64 {
         self.into()
     }
@@ -151,21 +76,7 @@ impl<const E: usize, const F: usize> MandelbrotNumber for MaskedFloat<E, F> {
 /// Needs at least 4 bits of integer part to allow "4" + sign.
 macro_rules! impl_fixed {
     ($t:ty) => {
-        impl MandelbrotNumber for $t {
-            fn zero() -> Self {
-                Self::unwrapped_from_num(0)
-            }
-            fn one() -> Self {
-                Self::unwrapped_from_num(1)
-            }
-            fn two() -> Self {
-                Self::unwrapped_from_num(2)
-            }
-
-            fn four() -> Self {
-                Self::unwrapped_from_num(4)
-            }
-
+        impl FractalNumber for $t {
             fn to_f64(self) -> f64 {
                 self.into()
             }
@@ -301,21 +212,7 @@ impl FromRational for softposit::P8 {
 
 macro_rules! impl_posit {
     ($t:ty) => {
-        impl MandelbrotNumber for $t {
-            fn zero() -> Self {
-                Self::from_i8(0)
-            }
-            fn one() -> Self {
-                Self::from_i8(1)
-            }
-            fn two() -> Self {
-                Self::from_i8(2)
-            }
-
-            fn four() -> Self {
-                Self::from_i8(4)
-            }
-
+        impl FractalNumber for $t {
             fn from_i32(i: i32) -> Self {
                 <$t>::from_i32(i)
             }
@@ -341,9 +238,9 @@ mod tests {
     fn test_fixed_i16f3() {
         type T = fixed::types::I13F3;
 
-        let x0: T = T::zero();
+        let x0: T = T::from_i32(0);
         assert_eq!(x0, T::unwrapped_from_num(0));
-        let x4: T = T::four();
+        let x4: T = T::from_i32(4);
         assert_eq!(x4, T::unwrapped_from_num(4));
 
         let x1p5: T = T::from_bigrational(&BigRational::new(3.into(), 2.into())).unwrap();
@@ -361,9 +258,9 @@ mod tests {
     fn test_fixed_rounding() {
         type T = fixed::types::I15F1;
 
-        let x0: T = T::zero();
+        let x0: T = T::from_i32(0);
         assert_eq!(x0, T::unwrapped_from_num(0));
-        let x4: T = T::four();
+        let x4: T = T::from_i32(4);
         assert_eq!(x4, T::unwrapped_from_num(4));
         let x1p5: T = T::from_bigrational(&BigRational::new(3.into(), 2.into())).unwrap();
         assert_eq!(x1p5, T::unwrapped_from_num(1.5));

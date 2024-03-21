@@ -1,6 +1,5 @@
 use crate::{Escape, EscapeVector, Size, Zero, ZeroVector};
 use hsv;
-use std::cmp;
 
 /// Settings for rendering a fractal into an image.
 #[derive(Default)]

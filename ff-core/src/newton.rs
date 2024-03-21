@@ -6,7 +6,7 @@ use std::ops::Range;
 //   Parameterize to other functions
 use crate::{masked_float::MaskedFloat, numeric::Complex, CommonParams};
 
-pub use crate::number::MandelbrotNumber;
+pub use crate::number::FractalNumber;
 use crate::{Zero, ZeroVector};
 use num::BigRational;
 
@@ -49,7 +49,7 @@ fn evaluate_parallel_numeric<N>(
     iterations: usize,
 ) -> Result<ZeroVector, String>
 where
-    N: MandelbrotNumber + Send + Sync,
+    N: FractalNumber + Send + Sync,
 {
     let size = params.size;
     // Create the X and Y ranges up-front:
@@ -110,7 +110,7 @@ where
 #[inline]
 fn find_zero<N>(x: &N, y: &N, limit: usize) -> Option<(Complex<N>, usize)>
 where
-    N: MandelbrotNumber,
+    N: FractalNumber,
 {
     let mut z: Complex<N> = Complex {
         re: x.clone(),
@@ -118,18 +118,18 @@ where
     };
 
     let zero: Complex<N> = Complex {
-        re: N::zero(),
-        im: N::zero(),
+        re: N::from_i32(0),
+        im: N::from_i32(0),
     };
 
     let one: Complex<N> = Complex {
-        re: N::one(),
-        im: N::zero(),
+        re: N::from_i32(1),
+        im: N::from_i32(0),
     };
 
     let three: Complex<N> = Complex {
         re: N::from_i32(3),
-        im: N::zero(),
+        im: N::from_i32(0),
     };
 
     for i in 0..limit {
@@ -144,7 +144,7 @@ where
         // TODO: The function and its derivative could come in as lambdas.
         let fz = z.clone() * z.clone() * z.clone() - one.clone();
         let fpz = three.clone() * z.clone() * z.clone();
-        if fpz.re.clone() * fpz.re.clone() + fpz.im.clone() * fpz.im.clone() == N::zero() {
+        if fpz.re.clone() * fpz.re.clone() + fpz.im.clone() * fpz.im.clone() == N::from_i32(0) {
             return None;
         }
         let del = fz.clone() / fpz;

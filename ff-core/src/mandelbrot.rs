@@ -5,7 +5,7 @@ use std::ops::Range;
 /// parameterized on a numeric type.
 use crate::{masked_float::MaskedFloat, numeric::Complex, CommonParams};
 
-pub use crate::number::MandelbrotNumber;
+pub use crate::number::FractalNumber;
 use crate::{Escape, EscapeVector};
 use num::BigRational;
 
@@ -58,7 +58,7 @@ fn evaluate_parallel_numeric<N>(
     iterations: usize,
 ) -> Result<EscapeVector, String>
 where
-    N: MandelbrotNumber + Send + Sync,
+    N: FractalNumber + Send + Sync,
 {
     let size = params.size;
     // Create the X and Y ranges up-front:
@@ -95,13 +95,13 @@ where
 #[inline]
 fn escape<N>(x: &N, y: &N, limit: usize) -> Option<Escape>
 where
-    N: MandelbrotNumber,
+    N: FractalNumber,
 {
     let mut z: Complex<N> = Complex {
-        re: N::zero(),
-        im: N::zero(),
+        re: N::from_i32(0),
+        im: N::from_i32(0),
     };
-    let four: N = N::four();
+    let four: N = N::from_i32(4);
     let coord = Complex {
         re: x.clone(),
         im: y.clone(),

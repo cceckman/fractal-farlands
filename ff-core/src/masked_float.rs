@@ -74,8 +74,10 @@ impl<const E: usize, const F: usize> From<f64> for MaskedFloat<E, F> {
     fn from(val: f64) -> Self {
         let bits = val.to_bits();
         let sign = bits & (SIGN_MASK | EXPONENT_SIGN_MASK);
+        let mut frac = bits & FRACTION_MASKS[F];
         let exp = if bits & EXPONENT_SIGN_MASK != 0 {
             if bits & EXPONENT_MASKS[E] != 0 {
+                frac = 0;
                 ((1 << E + FRACTION) - 1) & EXPONENT_MASK
             } else {
                 bits & EXPONENT_MASK
@@ -90,12 +92,12 @@ impl<const E: usize, const F: usize> From<f64> for MaskedFloat<E, F> {
             }
 
             if bits & EXPONENT_MASKS[E] != EXPONENT_MASKS[E] {
+                frac = FRACTION_MASK;
                 EXPONENT_MASKS[E]
             } else {
                 bits & EXPONENT_MASK
             }
         };
-        let frac = bits & FRACTION_MASKS[F];
         Self {
             val: f64::from_bits(sign | exp | frac),
         }

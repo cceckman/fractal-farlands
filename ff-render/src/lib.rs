@@ -13,7 +13,7 @@ use std::{
     sync::{mpsc::Receiver, Arc},
 };
 
-use ff_core::RenderRequest;
+use ff_core::{CancelContext, RenderRequest};
 mod oneshot;
 
 pub struct RenderServer {
@@ -87,14 +87,17 @@ fn dispatch(pool: rayon::ThreadPool, receiver: Receiver<ImageRequest>) {
 fn render(req: ImageRequest) {
     let ImageRequest { request, result } = req;
     let res = match request.fractal {
-        ff_core::FractalParams::Mandelbrot { iters } => mandelbrot_render(request.common, iters),
-        ff_core::FractalParams::Newton { iters } => newton_render(request.common, iters),
+        ff_core::FractalParams::Mandelbrot { iters } => {
+            mandelbrot_render(&result, request.common, iters)
+        }
+        ff_core::FractalParams::Newton { iters } => newton_render(&result, request.common, iters),
         _ => Err(Error::InvalidArgument("unknown fractal".to_owned())),
     };
     result.send(res);
 }
 
 fn mandelbrot_render(
+    ctx: &dyn CancelContext,
     request: ff_core::CommonParams,
     iters: usize,
 ) -> Result<image::DynamicImage, Error> {
@@ -105,7 +108,7 @@ fn mandelbrot_render(
     let size = request.size.clone();
 
     let output =
-        ff_core::mandelbrot::compute(&request, iters).map_err(|msg| Error::Internal(msg))?;
+        ff_core::mandelbrot::compute(ctx, &request, iters).map_err(|msg| Error::Internal(msg))?;
     tracing::debug!("mandelbrot-computed");
 
     let image = ff_core::image::Renderer {}
@@ -120,6 +123,7 @@ fn mandelbrot_render(
 }
 
 fn newton_render(
+    ctx: &dyn CancelContext,
     request: ff_core::CommonParams,
     iters: usize,
 ) -> Result<image::DynamicImage, Error> {
@@ -129,7 +133,7 @@ fn newton_render(
     let _guard = span.enter();
     let size = request.size.clone();
 
-    let output = ff_core::newton::compute(&request, iters).map_err(|msg| Error::Internal(msg))?;
+    let output = ff_core::newton::compute(ctx, &request, iters).map_err(|msg| Error::Internal(msg))?;
     tracing::debug!("newton-computed");
 
     let image = ff_core::image::NewtonRenderer {}

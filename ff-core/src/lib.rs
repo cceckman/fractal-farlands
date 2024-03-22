@@ -12,6 +12,20 @@ mod numeric;
 
 pub use numeric::FromRational;
 
+/// Represents a cancellation token: something that can be used to check whether computation should be canceled.
+pub trait CancelContext : Sync {
+    fn is_canceled(&self) -> bool;
+}
+
+
+// A CancelContext which is never canceled.
+pub struct NeverCancel();
+impl CancelContext for NeverCancel {
+    fn is_canceled(&self) -> bool {
+        false
+    }
+}
+
 /// Rendering-request parameters, common across renderables.
 #[derive(Debug, Clone)]
 pub struct CommonParams {

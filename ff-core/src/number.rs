@@ -137,6 +137,7 @@ macro_rules! impl_fixed {
 impl_fixed!(fixed::types::I11F5);
 impl_fixed!(fixed::types::I13F3);
 impl_fixed!(fixed::types::I15F1);
+impl_fixed!(fixed::types::I22F10);
 impl_fixed!(fixed::types::I20F12);
 
 impl FromRational for softposit::P32 {

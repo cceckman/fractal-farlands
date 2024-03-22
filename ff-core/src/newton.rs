@@ -1,4 +1,4 @@
-use fixed::types::{I11F5, I20F12};
+use fixed::types::{I11F5, I22F10, I20F12};
 use rayon::prelude::*;
 use std::{ops::Range, panic::AssertUnwindSafe};
 
@@ -26,6 +26,7 @@ const FUNCTIONS: &[(&'static str, EscapeFn)] = &[
         "MaskedFloat<4,50>",
         evaluate_parallel_numeric::<MaskedFloat<4, 50>>,
     ),
+    ("I22F10", evaluate_parallel_numeric::<I22F10>),
     ("I20F12", evaluate_parallel_numeric::<I20F12>),
     ("I11F5", evaluate_parallel_numeric::<I11F5>),
 ];

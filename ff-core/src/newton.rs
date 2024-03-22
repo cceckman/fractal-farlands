@@ -1,4 +1,4 @@
-use fixed::types::{I11F5, I22F10, I20F12};
+use fixed::types::{I11F5, I20F12, I22F10};
 use rayon::prelude::*;
 use std::{ops::Range, panic::AssertUnwindSafe};
 

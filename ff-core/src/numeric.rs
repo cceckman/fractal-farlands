@@ -2,7 +2,7 @@ use std::ops::{Add, Div, Mul, Sub};
 
 use num::{BigRational, ToPrimitive};
 
-use crate::{mandelbrot::MandelbrotNumber, masked_float::MaskedFloat};
+use crate::{mandelbrot::FractalNumber, masked_float::MaskedFloat};
 
 /// A numeric type that can be converted from a BigRational.
 ///
@@ -55,7 +55,7 @@ pub struct Complex<N> {
 
 impl<N> Complex<N>
 where
-    N: MandelbrotNumber,
+    N: FractalNumber,
 {
     /// Squares the given number.
     /// Per https://github.com/cceckman/fractal-farlands/issues/9, this takes fewer operations than
@@ -63,7 +63,7 @@ where
     pub fn square(self) -> Self {
         // (a+bi)^2 = (a^2-b^2) + 2abi
         let re = self.re.clone() * self.re.clone() - self.im.clone() * self.im.clone();
-        let im = <N as MandelbrotNumber>::two() * (self.re * self.im);
+        let im = <N as FractalNumber>::from_i32(2) * (self.re * self.im);
         Self { re, im }
     }
 

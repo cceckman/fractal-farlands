@@ -332,6 +332,7 @@ dependencies = [
  "num",
  "rayon",
  "softposit",
+ "tracing",
 ]
 
 [[package]]

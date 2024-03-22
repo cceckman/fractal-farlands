@@ -80,7 +80,7 @@ fn dispatch(pool: rayon::ThreadPool, receiver: Receiver<ImageRequest>) {
     for req in receiver.iter() {
         // spawn_fifo so that images complete in ~the same order as requested;
         // we don't want partially-rendered images.
-        pool.spawn_fifo({ || render(req) })
+        pool.spawn_fifo(|| render(req))
     }
 }
 

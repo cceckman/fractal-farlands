@@ -1,12 +1,13 @@
+use fixed::types::{I11F5, I20F12};
 use rayon::prelude::*;
-use std::ops::Range;
+use std::{ops::Range, panic::AssertUnwindSafe};
 
 // Implementation of Newton's fractal for z^3-1
 // TODO:
 //   Parameterize to other functions
 use crate::{masked_float::MaskedFloat, numeric::Complex, CommonParams};
 
-pub use crate::number::MandelbrotNumber;
+pub use crate::number::FractalNumber;
 use crate::{Zero, ZeroVector};
 use num::BigRational;
 
@@ -25,6 +26,8 @@ const FUNCTIONS: &[(&'static str, EscapeFn)] = &[
         "MaskedFloat<4,50>",
         evaluate_parallel_numeric::<MaskedFloat<4, 50>>,
     ),
+    ("I20F12", evaluate_parallel_numeric::<I20F12>),
+    ("I11F5", evaluate_parallel_numeric::<I11F5>),
 ];
 
 /// List the numeric formats that are valid for rendering.
@@ -49,7 +52,7 @@ fn evaluate_parallel_numeric<N>(
     iterations: usize,
 ) -> Result<ZeroVector, String>
 where
-    N: MandelbrotNumber + Send + Sync,
+    N: FractalNumber + Send + Sync,
 {
     let size = params.size;
     // Create the X and Y ranges up-front:
@@ -75,9 +78,14 @@ where
         .par_bridge()
         .into_par_iter()
         .for_each(|(y, row_out)| {
-            xs.iter().zip(row_out).for_each(|(x, out)| {
-                *out = find_zero(x, &y, iterations);
-            })
+            let result = std::panic::catch_unwind(AssertUnwindSafe(|| {
+                xs.iter().zip(row_out).for_each(|(x, out)| {
+                    *out = find_zero(x, &y, iterations);
+                })
+            }));
+            if result.is_err() {
+                tracing::error!("caught panic during mandelbrot evaluation");
+            }
         });
 
     let mut zero_index: Vec<Complex<N>> = Vec::new();
@@ -110,7 +118,7 @@ where
 #[inline]
 fn find_zero<N>(x: &N, y: &N, limit: usize) -> Option<(Complex<N>, usize)>
 where
-    N: MandelbrotNumber,
+    N: FractalNumber,
 {
     let mut z: Complex<N> = Complex {
         re: x.clone(),
@@ -118,18 +126,18 @@ where
     };
 
     let zero: Complex<N> = Complex {
-        re: N::zero(),
-        im: N::zero(),
+        re: N::from_i32(0),
+        im: N::from_i32(0),
     };
 
     let one: Complex<N> = Complex {
-        re: N::one(),
-        im: N::zero(),
+        re: N::from_i32(1),
+        im: N::from_i32(0),
     };
 
     let three: Complex<N> = Complex {
         re: N::from_i32(3),
-        im: N::zero(),
+        im: N::from_i32(0),
     };
 
     for i in 0..limit {
@@ -144,7 +152,7 @@ where
         // TODO: The function and its derivative could come in as lambdas.
         let fz = z.clone() * z.clone() * z.clone() - one.clone();
         let fpz = three.clone() * z.clone() * z.clone();
-        if fpz.re.clone() * fpz.re.clone() + fpz.im.clone() * fpz.im.clone() == N::zero() {
+        if fpz.re.clone() * fpz.re.clone() + fpz.im.clone() * fpz.im.clone() == N::from_i32(0) {
             return None;
         }
         let del = fz.clone() / fpz;

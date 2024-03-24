@@ -26,6 +26,10 @@ const FUNCTIONS: &[(&'static str, EscapeFn)] = &[
         "MaskedFloat<4,50>",
         evaluate_parallel_numeric::<MaskedFloat<4, 50>>,
     ),
+    (
+        "MaskedFloat<6,3>",
+        evaluate_parallel_numeric::<MaskedFloat<6, 3>>,
+    ),
     ("I22F10", evaluate_parallel_numeric::<I22F10>),
     ("I20F12", evaluate_parallel_numeric::<I20F12>),
     ("I11F5", evaluate_parallel_numeric::<I11F5>),

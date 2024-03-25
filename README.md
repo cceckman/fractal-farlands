@@ -1,12 +1,14 @@
-# Fractal Farlands
+# Fractal Overdrive (aka Fractal Farlands)
 
-Stephen Longfield and Charles Eckman
+See the [paper](Fractal_Overdrive.pdf) for more details.
 
--   Farlands: Minecraft area, far from the origin, where the terrain-generation algorithm starts to go silly due to precision issues
--   Fractals: Sensitive dependence on initial conditions
+This was previously "Fractal Farlands", after the Minecraft bug.
 
-How much do fractals results depend on the precision of the numeric representation?
+To build and run:
 
-Let's find out!
+-   Get a Cargo toolchain for your platform
+-   `cargo run --release --bin ff-web` - you want the optimized build, srsly.
+-   Go to the listed port in your web browser (e.g. `localhost:3000`)
+-   Enjoy!
 
 

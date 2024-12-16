@@ -2,3 +2,5 @@
 # Testing out mold:
 .cargo/
 .vscode/
+**/.redo/**
+

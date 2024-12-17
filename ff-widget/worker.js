@@ -23,8 +23,9 @@ onmessage = async function(e) {
     req.numeric = e.data.numeric;
     req.fractal = e.data.fractal;
 
-
-    postMessage("I hear you!");
+    let data = req.render();
+    postMessage(data, [data.data.buffer]);
+    // postMessage("ok");
 };
 
 console.log("initialized wasm worker");

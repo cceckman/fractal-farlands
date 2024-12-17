@@ -42,6 +42,10 @@ class OverdriveElement extends HTMLElement {
             this.numeric.add(el);
         }
         this.numeric.value = selected;
+        if (!this.numeric.value) {
+            const numeric = this.attributes.getNamedItem("numeric")?.value ?? "f32";
+            this.numeric.value = numeric;
+        }
     }
 
     connectedCallback() {
@@ -60,14 +64,6 @@ class OverdriveElement extends HTMLElement {
             }
         }
         this.fractal.addEventListener("change", () => { this.updateOptions() });
-
-        const numeric = this.attributes.getNamedItem("numeric")?.value;
-        if (numeric) {
-            let item = this.numeric.namedItem(numeric);
-            if (item) {
-                item.selected = true;
-            }
-        }
 
         const x = this.attributes.getNamedItem("x")?.value ?? 0;
         const y = this.attributes.getNamedItem("y")?.value ?? 0;
@@ -90,9 +86,6 @@ class OverdriveElement extends HTMLElement {
 
         // Chain of initializations:
         init_done.then(() => { this.wasmInit() });
-
-        // - Read specified attributes for defaults
-        // - Fill in defaults on shadow DOM nodes
     }
 
     disconnectedCallback() {
@@ -101,10 +94,8 @@ class OverdriveElement extends HTMLElement {
     }
 
     wasmInit() {
-        console.log("init done; starting WASM for ", this.name, this.shadowRoot.getRootNode());
         this.updateOptions();
         this.shadowRoot.querySelector("form").addEventListener("submit", (e) => {
-            console.log("got submit event");
             e.preventDefault();
             this.render();
         });
@@ -134,11 +125,14 @@ class OverdriveElement extends HTMLElement {
 
     // Called on submit, to handle re-rendering.
     render() {
+        console.log("starting render of", this.name);
+        // TODO: Add a spinner here!
         this.worker.postMessage(this.makeRequest());
     }
 
     getNewData(msg) {
-        console.log("got new message from worker in main: ", msg);
+        let ctx = this.canvas.getContext("2d");
+        ctx.putImageData(msg.data, 0, 0);
     }
 
 }

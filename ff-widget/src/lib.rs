@@ -5,7 +5,7 @@ use std::num::ParseIntError;
 use ff_core::{CommonParams, NeverCancel, Size};
 use num::{bigint::ParseBigIntError, BigInt, BigRational};
 use wasm_bindgen::prelude::*;
-use web_sys::{Event, HtmlCanvasElement, HtmlInputElement, HtmlSelectElement, ImageData};
+use web_sys::ImageData;
 
 #[wasm_bindgen]
 extern "C" {
@@ -58,27 +58,44 @@ pub struct Request {
 
 #[wasm_bindgen]
 impl Request {
+    /// Create a new rendering request.
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
         Default::default()
     }
+
+    /// Inner Rust routine to render,
+    /// but generates a non-JS-friendly error type.
+    fn render_rs(&self) -> Result<ImageData, Error> {
+        let (params, iters) = self.common_params()?;
+
+        let v = NeverCancel();
+
+        let image = if self.fractal == "mandelbrot" {
+            let output = ff_core::mandelbrot::compute(&v, &params, iters).map_err(Error::Render)?;
+            render::mandelbrot(output)
+        } else if self.fractal == "newton" {
+            let output = ff_core::newton::compute(&v, &params, iters).map_err(Error::Render)?;
+            render::newton(output)
+        } else {
+            return Err(Error::InvalidFractal(self.fractal.clone()));
+        };
+
+        //self.canvas.set_height(params.size.height as u32);
+        //self.canvas.set_width(params.size.width as u32);
+
+        ImageData::new_with_js_u8_clamped_array(&image, params.size.width as u32)
+            .map_err(|_| Error::Render("could not create ImageData".to_owned()))
+    }
+
+    /// Render the fractal given the provided parameters.
+    #[wasm_bindgen]
+    pub fn render(&self) -> Result<ImageData, String> {
+        self.render_rs().map_err(|e| e.to_string())
+    }
 }
 
-#[derive(Debug)]
-struct Context {
-    name: String,
-    canvas: HtmlCanvasElement,
-    x: HtmlInputElement,
-    y: HtmlInputElement,
-    window: HtmlInputElement,
-    scale: HtmlInputElement,
-    iterations: HtmlInputElement,
-    resolution: HtmlInputElement,
-    numeric: HtmlSelectElement,
-    fractal: HtmlSelectElement,
-}
-
-/// Get a list of strings-- numeric types that can be used with this fractal.
+/// Get a list of the numeric types that can be used with this fractal.
 #[wasm_bindgen]
 pub fn numeric_options(fractal: &str) -> Vec<String> {
     if fractal == "mandelbrot" {
@@ -122,59 +139,6 @@ impl Request {
             },
             iters,
         ))
-    }
-
-    fn update(&self, ev: Option<Event>) {
-        assert!(!self.name.is_empty());
-        // log(&format!("updating {}", &self.name));
-        if let Some(ev) = ev {
-            ev.prevent_default();
-        }
-        let e = self.render();
-        match e {
-            Ok(_) =>
-            /*log(&format!("rendered {}", &self.name))*/
-            {
-                ()
-            }
-            Err(e) => log(&format!(
-                "error in rendering: {}, {}",
-                /*&self.name*/ "widget", e
-            )),
-        }
-    }
-
-    fn render(&self) -> Result<(), Error> {
-        let (params, iters) = self.common_params()?;
-
-        let v = NeverCancel();
-
-        let image = if self.fractal == "mandelbrot" {
-            let output = ff_core::mandelbrot::compute(&v, &params, iters).map_err(Error::Render)?;
-            render::mandelbrot(output)
-        } else if self.fractal == "newton" {
-            let output = ff_core::newton::compute(&v, &params, iters).map_err(Error::Render)?;
-            render::newton(output)
-        } else {
-            return Err(Error::InvalidFractal(self.fractal.clone()));
-        };
-
-        //self.canvas.set_height(params.size.height as u32);
-        //self.canvas.set_width(params.size.width as u32);
-
-        let id = ImageData::new_with_js_u8_clamped_array(&image, params.size.width as u32)
-            .map_err(|_| Error::Render("could not create ImageData".to_owned()))?;
-        //let ctx2d: CanvasRenderingContext2d = self
-        //    .canvas
-        //    .get_context("2d")
-        //    .unwrap()
-        //    .unwrap()
-        //    .dyn_into()
-        //    .unwrap();
-        //ctx2d
-        //    .put_image_data(&id, 0.0, 0.0)
-        //    .map_err(|e| Error::Render(format!("could not set image data: {:?}", e)))
-        Ok(())
     }
 }
 

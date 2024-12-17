@@ -1,14 +1,11 @@
 //! Fractal Overdrive as an embeddable widget.
 
-use std::{num::ParseIntError, rc::Rc};
+use std::num::ParseIntError;
 
 use ff_core::{CommonParams, NeverCancel, Size};
 use num::{bigint::ParseBigIntError, BigInt, BigRational};
 use wasm_bindgen::prelude::*;
-use web_sys::{
-    CanvasRenderingContext2d, Event, HtmlCanvasElement, HtmlElement, HtmlFormElement,
-    HtmlInputElement, HtmlOptionElement, HtmlSelectElement, ImageData,
-};
+use web_sys::{Event, HtmlCanvasElement, HtmlInputElement, HtmlSelectElement, ImageData};
 
 #[wasm_bindgen]
 extern "C" {
@@ -33,8 +30,43 @@ enum Error {
     InvalidFractal(String),
 }
 
+/// A rendering request from the JS side.
+#[wasm_bindgen]
+#[derive(Default, Debug)]
+pub struct Request {
+    /// Name of the widget.
+    #[wasm_bindgen(getter_with_clone)]
+    pub name: String,
+
+    #[wasm_bindgen(getter_with_clone)]
+    pub x: String,
+    #[wasm_bindgen(getter_with_clone)]
+    pub y: String,
+    #[wasm_bindgen(getter_with_clone)]
+    pub window: String,
+    #[wasm_bindgen(getter_with_clone)]
+    pub scale: String,
+    #[wasm_bindgen(getter_with_clone)]
+    pub iterations: String,
+    #[wasm_bindgen(getter_with_clone)]
+    pub resolution: String,
+    #[wasm_bindgen(getter_with_clone)]
+    pub numeric: String,
+    #[wasm_bindgen(getter_with_clone)]
+    pub fractal: String,
+}
+
+#[wasm_bindgen]
+impl Request {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Default::default()
+    }
+}
+
 #[derive(Debug)]
 struct Context {
+    name: String,
     canvas: HtmlCanvasElement,
     x: HtmlInputElement,
     y: HtmlInputElement,
@@ -46,11 +78,25 @@ struct Context {
     fractal: HtmlSelectElement,
 }
 
-impl Context {
+/// Get a list of strings-- numeric types that can be used with this fractal.
+#[wasm_bindgen]
+pub fn numeric_options(fractal: &str) -> Vec<String> {
+    if fractal == "mandelbrot" {
+        ff_core::mandelbrot::formats()
+            .map(|v| v.to_owned())
+            .collect()
+    } else if fractal == "newton" {
+        ff_core::newton::formats().map(|v| v.to_owned()).collect()
+    } else {
+        Vec::new()
+    }
+}
+
+impl Request {
     /// Extract the common parameters from the
     fn common_params(&self) -> Result<(CommonParams, usize), Error> {
         let [x, y, window, scale]: [Result<num::BigInt, _>; 4] =
-            [&self.x, &self.y, &self.window, &self.scale].map(|v| v.value().parse());
+            [&self.x, &self.y, &self.window, &self.scale].map(|v| v.parse());
         let [x, y, window, scale] = [x?, y?, window?, scale?];
         // Invert the Y axis, to go from "screen dimensions" to "coordinate dimensions".
         let y = -y;
@@ -61,8 +107,8 @@ impl Context {
             let end = BigRational::new(v + &half_range, scale.clone());
             start..end
         };
-        let size: usize = self.resolution.value().parse()?;
-        let iters: usize = self.iterations.value().parse()?;
+        let size: usize = self.resolution.parse()?;
+        let iters: usize = self.iterations.parse()?;
 
         Ok((
             CommonParams {
@@ -72,155 +118,64 @@ impl Context {
                 },
                 x: range(x),
                 y: range(y),
-                numeric: self.numeric.value(),
+                numeric: self.numeric.clone(),
             },
             iters,
         ))
     }
 
-    /// Update the "numeric format" options with those available, based on the current fractal.
-    fn update_options(&self) {
-        let numerics = if self.fractal.value() == "mandelbrot" {
-            ff_core::mandelbrot::formats().collect()
-        } else if self.fractal.value() == "newton" {
-            ff_core::newton::formats().collect()
-        } else {
-            Vec::new()
-        };
-
-        for i in (0..self.numeric.options().length()).rev() {
-            let _ = self.numeric.options().remove(i as i32);
-        }
-
-        for n in numerics {
-            let elem = HtmlOptionElement::new().unwrap();
-            elem.set_value(n);
-            elem.set_text(n);
-            self.numeric.add_with_html_option_element(&elem).unwrap();
-        }
-    }
-
     fn update(&self, ev: Option<Event>) {
+        assert!(!self.name.is_empty());
+        // log(&format!("updating {}", &self.name));
         if let Some(ev) = ev {
             ev.prevent_default();
         }
         let e = self.render();
         match e {
-            Ok(_) => log("rendered"),
-            Err(e) => log(&format!("error in rendering: {}", e)),
+            Ok(_) =>
+            /*log(&format!("rendered {}", &self.name))*/
+            {
+                ()
+            }
+            Err(e) => log(&format!(
+                "error in rendering: {}, {}",
+                /*&self.name*/ "widget", e
+            )),
         }
     }
 
     fn render(&self) -> Result<(), Error> {
         let (params, iters) = self.common_params()?;
-        log(&format!("params: {params:?}"));
 
         let v = NeverCancel();
 
-        let image = if self.fractal.value() == "mandelbrot" {
+        let image = if self.fractal == "mandelbrot" {
             let output = ff_core::mandelbrot::compute(&v, &params, iters).map_err(Error::Render)?;
             render::mandelbrot(output)
-        } else if self.fractal.value() == "newton" {
+        } else if self.fractal == "newton" {
             let output = ff_core::newton::compute(&v, &params, iters).map_err(Error::Render)?;
             render::newton(output)
         } else {
-            return Err(Error::InvalidFractal(self.fractal.value()));
+            return Err(Error::InvalidFractal(self.fractal.clone()));
         };
 
-        self.canvas.set_height(params.size.height as u32);
-        self.canvas.set_width(params.size.width as u32);
+        //self.canvas.set_height(params.size.height as u32);
+        //self.canvas.set_width(params.size.width as u32);
 
         let id = ImageData::new_with_js_u8_clamped_array(&image, params.size.width as u32)
             .map_err(|_| Error::Render("could not create ImageData".to_owned()))?;
-        let ctx2d: CanvasRenderingContext2d = self
-            .canvas
-            .get_context("2d")
-            .unwrap()
-            .unwrap()
-            .dyn_into()
-            .unwrap();
-        ctx2d
-            .put_image_data(&id, 0.0, 0.0)
-            .map_err(|e| Error::Render(format!("could not set image data: {:?}", e)))
+        //let ctx2d: CanvasRenderingContext2d = self
+        //    .canvas
+        //    .get_context("2d")
+        //    .unwrap()
+        //    .unwrap()
+        //    .dyn_into()
+        //    .unwrap();
+        //ctx2d
+        //    .put_image_data(&id, 0.0, 0.0)
+        //    .map_err(|e| Error::Render(format!("could not set image data: {:?}", e)))
+        Ok(())
     }
 }
 
 mod render;
-
-/// Insert a Fractal Overdrive widget in the provided context.
-#[wasm_bindgen]
-pub fn attach(context: HtmlElement) -> Result<(), JsValue> {
-    let canvas: HtmlCanvasElement = context
-        .query_selector("canvas")?
-        .ok_or("no canvas element in selected region")?
-        .dyn_into()?;
-    let x: HtmlInputElement = context
-        .query_selector("#input-x")?
-        .ok_or("no X element in selected region")?
-        .dyn_into()?;
-    let y: HtmlInputElement = context
-        .query_selector("#input-y")?
-        .ok_or("no Y element in selected region")?
-        .dyn_into()?;
-    let window: HtmlInputElement = context
-        .query_selector("#input-window")?
-        .ok_or("no window element in selected region")?
-        .dyn_into()?;
-    let scale: HtmlInputElement = context
-        .query_selector("#input-scale")?
-        .ok_or("no scale element in selected region")?
-        .dyn_into()?;
-    let iterations: HtmlInputElement = context
-        .query_selector("#input-iterations")?
-        .ok_or("no iterations element in selected region")?
-        .dyn_into()?;
-    let resolution: HtmlInputElement = context
-        .query_selector("#input-resolution")?
-        .ok_or("no resolution element in selected region")?
-        .dyn_into()?;
-    let numeric: HtmlSelectElement = context
-        .query_selector("#input-numeric")?
-        .ok_or("no numeric element in selected region")?
-        .dyn_into()?;
-    let fractal: HtmlSelectElement = context
-        .query_selector("#input-fractal")?
-        .ok_or("no fractal element in selected region")?
-        .dyn_into()?;
-
-    let form: HtmlFormElement = context
-        .query_selector("form")?
-        .ok_or("no formelement in selected region")?
-        .dyn_into()?;
-
-    let context = Rc::new(Context {
-        canvas,
-        x,
-        y,
-        window,
-        scale,
-        iterations,
-        resolution,
-        numeric,
-        fractal: fractal.clone(),
-    });
-
-    let numeric_trigger = {
-        let context = Rc::clone(&context);
-        Closure::<dyn Fn(Event)>::new(move |_ev: Event| context.update_options())
-    };
-    fractal
-        .add_event_listener_with_callback("change", numeric_trigger.as_ref().unchecked_ref())
-        .unwrap();
-
-    context.update_options();
-    context.update(None);
-
-    let trigger = Closure::<dyn Fn(Event)>::new(move |ev: Event| context.update(Some(ev)));
-    form.add_event_listener_with_callback("submit", trigger.as_ref().unchecked_ref())?;
-    // We leak the triggers, per wasm-bindgen advice.
-    // This is OK, we will only have one per widget on the page.
-    trigger.forget();
-    numeric_trigger.forget();
-
-    Ok(())
-}

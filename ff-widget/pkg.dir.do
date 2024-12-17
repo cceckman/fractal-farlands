@@ -4,9 +4,7 @@ set -eu
 
 wasm-pack build --target=web >&2
 
-env
-
-if type redo-always 2>&1 >/dev/null
+if type redo-always >/dev/null 2>&1
 then
     redo-always
     sha256sum pkg/* >$3

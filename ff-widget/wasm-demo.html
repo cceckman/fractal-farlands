@@ -3,41 +3,60 @@
         <title>Fractal Overdrive</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <script type="module" src="./wasm-demo.js" ></script>
+<style>
+
+        body{
+            display: flex;
+        }
+        fractal-overdrive {
+            max-width: 50%;
+            display: block;
+        }
+        </style>
     </head>
     <body>
-
-        <div class="fractal-overdrive">
+        <template id="fractal-overdrive-tmpl">
             <canvas width="100" height="100"></canvas>
             <form id="form-rerender" autocomplete="off" class="parameters" action=".">
                 <h2>Target area</h2>
                 <p>
-                    <label>Center X (numerator):</label><input id="input-x" name="x" type="number" value="0"> 
-                    <label>Center Y (numerator):</label><input id="input-y" name="y" type="number" value="0"> 
-                    <label>Window size (numerator)</label><input id="input-window" name="window" type="number" value="4"> 
-                    <label>Scale (denominator):</label><input id="input-scale" name="scale" type="number" value="1">
+                    <label>Center X (numerator):</label><input id="input-x" name="x" type="number" > 
+                    <label>Center Y (numerator):</label><input id="input-y" name="y" type="number" > 
+                    <label>Window size (numerator)</label><input id="input-window" name="window" type="number" > 
+                    <label>Scale (denominator):</label><input id="input-scale" name="scale" type="number">
                 </p>
 
                 <h2>Rendering settings</h2>
                 <p>
-                    <label>Resolution (pixels):</label><input id="input-resolution" name="resolution" type="number" value="512"> 
-                    <label>Max iterations:</label><input id="input-iterations" name="input-iterations" type="number" value="16">
+                    <label>Resolution (pixels):</label><input id="input-resolution" name="resolution" type="number" > 
+                    <label>Max iterations:</label><input id="input-iterations" name="input-iterations" type="number" >
                     <label>Numeric format:</label><select id="input-numeric" name="input-numeric" >
-                        <option value="f32">f32</option>
                     </select>
                     <label>Fractal:</label><select id="input-fractal" name="input-fractal" >
-                        <option value="mandelbrot">Mandelbrot</option>
-                        <option value="newton">Newton</option>
+                        <option name="mandelbrot" value="mandelbrot">Mandelbrot</option>
+                        <option name="newton" value="newton">Newton</option>
                     </select>
                     <br>
 
                     <br>
                 </p>
-                <input id="input-go" text="Go" type="submit"></form>
-            <form>
+                <input id="input-go" text="Go" type="submit" disabled></form>
+        </template>
 
-            </form>
-        </div>
-
+        <fractal-overdrive 
+            name="mandelbrot-teaser"
+            fractal="mandelbrot"
+            x="304924415867450"
+            y="115639204659165"
+            window="32134205039616"
+            scale="803355125990400"
+            resolution="256"
+            iterations="128"
+            numeric="I11F5"
+        ></fractal-overdrive>
+        <fractal-overdrive 
+            name="newton-default"
+            fractal="newton"></fractal-overdrive>
     </body>
 </html>
 

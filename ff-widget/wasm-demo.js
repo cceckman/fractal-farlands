@@ -285,6 +285,8 @@ class OverdriveElement extends HTMLElement {
             console.log("got stale render response");
             return;
         }
+        this.canvasElement.width = original_request.resolution;
+        this.canvasElement.height = original_request.resolution;
 
         let ctx = this.canvasElement.getContext("2d");
         ctx.putImageData(image, 0, 0);

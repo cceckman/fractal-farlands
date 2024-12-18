@@ -15,6 +15,7 @@ class OverdriveElement extends HTMLElement {
         this.name = `fractal-overdrive ${widget_count}`;
         widget_count++;
         this.worker = null;
+        this.outstandingCount = 0;
 
         this.xElement = this.shadowRoot.querySelector("#input-x");
         this.yElement = this.shadowRoot.querySelector("#input-y");
@@ -110,7 +111,9 @@ class OverdriveElement extends HTMLElement {
             this.hasOriginal = true;
             let image = new Image(); // creates an HTMLImageElement!
             image.src = original.value;
+            this.outstandingCount += 1;
             image.decode().then(() => {
+                this.outstandingCount -= 1;
                 let same = this.requestIsCurrent(original_request);
                 if (same && !this.currentDisplay) {
                     let xscale = resolution / image.naturalWidth;
@@ -121,8 +124,8 @@ class OverdriveElement extends HTMLElement {
                     let context = this.canvasElement.getContext("2d");
                     context.scale(xscale, yscale);
                     context.drawImage(image, 0, 0);
-                    this.updateStatus();
                 }
+                this.updateStatus();
             }).catch((err) => {
                 console.log("error displaying default image for", this.name, ": ", err);
             });
@@ -138,6 +141,12 @@ class OverdriveElement extends HTMLElement {
     }
 
     updateStatus() {
+        if (this.outstandingCount != 0) {
+            this.statusElement.classList.add("loader");
+            this.statusElement.innerHTML = "";
+            return
+        }
+        // All oustanding background work is complete.
         this.statusElement.classList.remove("loader");
         if (this.requestIsCurrent(this.currentDisplay)) {
             this.statusElement.innerText = "✓";
@@ -264,12 +273,13 @@ class OverdriveElement extends HTMLElement {
     // Called on submit, to handle re-rendering.
     render() {
         console.log("starting render of", this.name);
-        this.statusElement.innerHTML = "";
-        this.statusElement.classList.add("loader");
+        this.outstandingCount += 1;
+        this.updateStatus();
         this.worker.postMessage(this.makeRequest());
     }
 
     getNewData(msg) {
+        this.outstandingCount -= 1;
         let { request: original_request, image: image } = msg.data;
         if (!this.requestIsCurrent(original_request)) {
             console.log("got stale render response");

@@ -1,4 +1,10 @@
 :host {
     background: #000;
     color: #fff;
+
+    display: grid;
+    /* 3 columns: left control, display, right control */
+    grid-template-columns: repeat(3, max-content);
+    /* 5 rows: up control, display, down control, coordinates, meta controls */
+    grid-template-rows: repeat(5, max-content);
 }

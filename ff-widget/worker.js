@@ -14,13 +14,15 @@ onmessage = async function(msg) {
     await wasm_ready;
 
     let req = new Request();
+    // We transit the numeric fields as String rather than native BigInt,
+    // as we'd need to pass through some serialization/deserialization anyway to convert to num::BigInt.
     req.name = request.name;
-    req.x = request.x;
-    req.y = request.y;
-    req.window = request.window;
-    req.scale = request.scale;
-    req.iterations = request.iterations;
-    req.resolution = request.resolution;
+    req.x = request.x.toString();
+    req.y = request.y.toString();
+    req.window = request.window.toString();
+    req.scale = request.scale.toString();
+    req.iterations = request.iterations.toString();
+    req.resolution = request.resolution.toString();
     req.numeric = request.numeric;
     req.fractal = request.fractal;
 

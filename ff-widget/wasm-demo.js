@@ -12,27 +12,28 @@ class OverdriveElement extends HTMLElement {
         let shadowRoot = this.attachShadow({ mode: "open" });
         shadowRoot.appendChild(templateContent.cloneNode(true));
 
-        this.x = this.shadowRoot.querySelector("#input-x");
-        this.y = this.shadowRoot.querySelector("#input-y");
-        this.window = this.shadowRoot.querySelector("#input-window");
-        this.scale = this.shadowRoot.querySelector("#input-scale");
-        this.iterations = this.shadowRoot.querySelector("#input-iterations");
-        this.resolution = this.shadowRoot.querySelector("#input-resolution");
-        this.numeric = this.shadowRoot.querySelector("#input-numeric");
-        this.fractal = this.shadowRoot.querySelector("#input-fractal");
-        this.go = this.shadowRoot.querySelector("#input-go");
-        this.canvas = this.shadowRoot.querySelector("canvas");
-        this.currentDisplay = null;
-        this.hasOriginal = false;
-
         this.name = `fractal-overdrive ${widget_count}`;
         widget_count++;
         this.worker = null;
+
+        this.x = undefined;
+        this.y = undefined;
+        this.window = undefined;
+        this.scale = undefined;
+        this.iterations = undefined;
+        this.resolution = undefined;
+        this.numeric = undefined;
+        this.fractal = undefined;
+        this.canvas = this.shadowRoot.querySelector("canvas");
+        this.currentDisplay = null;
+        this.hasOriginal = false;
     }
 
     updateOptions() {
-        let opts = numeric_options(this.fractal.value);
-        let selected = this.numeric.value;
+        // TODO: Revise with new inputs
+        return;
+        let opts = numeric_options(this.fractal);
+        let selected = this.numeric;
         for (let i = this.numeric.length - 1; i >= 0; i--) {
             this.numeric.remove(i);
         }
@@ -53,29 +54,23 @@ class OverdriveElement extends HTMLElement {
     connectedCallback() {
         console.log("connected")
 
-        // Initialize the form fields from the attributes:
-        const x = this.attributes.getNamedItem("x")?.value ?? 0;
-        const y = this.attributes.getNamedItem("y")?.value ?? 0;
-        const window = this.attributes.getNamedItem("window")?.value ?? 4;
-        const scale = this.attributes.getNamedItem("scale")?.value ?? 1;
-        const resolution = this.attributes.getNamedItem("resolution")?.value ?? 256;
-        const iterations = this.attributes.getNamedItem("iterations")?.value ?? 16;
-        const pairs = [[x, this.x], [y, this.y], [window, this.window], [scale, this.scale], [resolution, this.resolution], [iterations, this.iterations]];
-        for (const [value, elem] of pairs) {
-            elem.value = value;
-        }
-        const fractal = this.attributes.getNamedItem("fractal")?.value ?? "mandelbrot";
-        let item = this.fractal.namedItem(fractal);
-        if (item) {
-            item.selected = true;
-        }
-
         const name = this.attributes.getNamedItem("name")?.value;
         if (name) {
             this.name = name;
         }
 
-        const numeric = this.attributes.getNamedItem("numeric")?.value ?? "f32";
+        // Initialize the data fields from attributes:
+        this.x = this.attributes.getNamedItem("x")?.value ?? 0;
+        this.y = this.attributes.getNamedItem("y")?.value ?? 0;
+        this.window = this.attributes.getNamedItem("window")?.value ?? 4;
+        this.scale = this.attributes.getNamedItem("scale")?.value ?? 1;
+        this.resolution = this.attributes.getNamedItem("resolution")?.value ?? 256;
+        this.iterations = this.attributes.getNamedItem("iterations")?.value ?? 16;
+
+        // TODO: Update "current display" portion of window
+        this.fractal = this.attributes.getNamedItem("fractal")?.value ?? "mandelbrot";
+        this.numeric = this.attributes.getNamedItem("numeric")?.value ?? "f32";
+        /*
         // Insert this option before we load the actual options:
         {
             let el = document.createElement("option");
@@ -84,10 +79,10 @@ class OverdriveElement extends HTMLElement {
             el.id = numeric;
             this.numeric.add(el);
             this.numeric.selected = numeric;
-        }
+        }*/
         // We have to defer "the actual options" until we've instantiated the WASM module locally.
-        this.canvas.height = resolution;
-        this.canvas.width = resolution;
+        this.canvas.height = this.resolution;
+        this.canvas.width = this.resolution;
 
         // Set up the "original" image, in case we don't interact.
         let original_request = this.makeRequest();
@@ -99,8 +94,8 @@ class OverdriveElement extends HTMLElement {
             image.decode().then(() => {
                 let same = this.requestIsCurrent(original_request);
                 if (same && !this.currentDisplay) {
-                    let xscale = resolution / image.naturalWidth;
-                    let yscale = resolution / image.naturalHeight;
+                    let xscale = this.resolution / image.naturalWidth;
+                    let yscale = this.resolution / image.naturalHeight;
                     // Nothing already rendered, and we haven't moved.
                     // Display the image.
                     this.currentDisplay = original_request;
@@ -136,13 +131,14 @@ class OverdriveElement extends HTMLElement {
     }
 
     wasmInit() {
-        this.fractal.addEventListener("change", () => { this.updateOptions() });
+        // TODO: properly render stuff
+        // this.fractal.addEventListener("change", () => { this.updateOptions() });
         this.updateOptions();
-        this.shadowRoot.querySelector("form").addEventListener("submit", (e) => {
-            e.preventDefault();
-            this.render();
-        });
-        this.go.disabled = false;
+        //this.shadowRoot.querySelector("form").addEventListener("submit", (e) => {
+        //    e.preventDefault();
+        //    this.render();
+        //});
+        // this.go.disabled = false;
         // We set up the receiving end, from the worker, during connectCallback.
 
         // Only re-render client-side if there's no default.
@@ -157,14 +153,14 @@ class OverdriveElement extends HTMLElement {
         // https://developer.mozilla.org/en-US/docs/Web/API/Worker/postMessage
         return {
             name: this.name,
-            x: this.x.value,
-            y: this.y.value,
-            window: this.window.value,
-            scale: this.scale.value,
-            iterations: this.iterations.value,
-            resolution: this.resolution.value,
-            numeric: this.numeric.value,
-            fractal: this.fractal.value,
+            x: this.x,
+            y: this.y,
+            window: this.window,
+            scale: this.scale,
+            iterations: this.iterations,
+            resolution: this.resolution,
+            numeric: this.numeric,
+            fractal: this.fractal,
         }
     }
 

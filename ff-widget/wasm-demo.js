@@ -1,4 +1,4 @@
-import init, { numeric_options, Request } from './pkg/ff_widget.js';
+import init, { numeric_options } from './pkg/ff_widget.js';
 
 let init_done = init();
 
@@ -22,6 +22,8 @@ class OverdriveElement extends HTMLElement {
         this.fractal = this.shadowRoot.querySelector("#input-fractal");
         this.go = this.shadowRoot.querySelector("#input-go");
         this.canvas = this.shadowRoot.querySelector("canvas");
+        this.currentDisplay = null;
+        this.hasOriginal = false;
 
         this.name = `fractal-overdrive ${widget_count}`;
         widget_count++;
@@ -51,20 +53,7 @@ class OverdriveElement extends HTMLElement {
     connectedCallback() {
         console.log("connected")
 
-        // Start up the new thread:
-        this.worker = new Worker("./worker.js", { type: "module" });
-        this.worker.addEventListener("message", (msg) => { this.getNewData(msg); });
-
-        // Initialize from named parameters:
-        const fractal = this.attributes.getNamedItem("fractal")?.value;
-        if (fractal) {
-            let item = this.fractal.namedItem(fractal);
-            if (item) {
-                item.selected = true;
-            }
-        }
-        this.fractal.addEventListener("change", () => { this.updateOptions() });
-
+        // Initialize the form fields from the attributes:
         const x = this.attributes.getNamedItem("x")?.value ?? 0;
         const y = this.attributes.getNamedItem("y")?.value ?? 0;
         const window = this.attributes.getNamedItem("window")?.value ?? 4;
@@ -75,17 +64,70 @@ class OverdriveElement extends HTMLElement {
         for (const [value, elem] of pairs) {
             elem.value = value;
         }
+        const fractal = this.attributes.getNamedItem("fractal")?.value ?? "mandelbrot";
+        let item = this.fractal.namedItem(fractal);
+        if (item) {
+            item.selected = true;
+        }
 
-        let name = this.attributes.getNamedItem("name")?.value;
+        const name = this.attributes.getNamedItem("name")?.value;
         if (name) {
             this.name = name;
         }
 
+        const numeric = this.attributes.getNamedItem("numeric")?.value ?? "f32";
+        // Insert this option before we load the actual options:
+        {
+            let el = document.createElement("option");
+            el.value = numeric;
+            el.text = numeric;
+            el.id = numeric;
+            this.numeric.add(el);
+            this.numeric.selected = numeric;
+        }
+        // We have to defer "the actual options" until we've instantiated the WASM module locally.
         this.canvas.height = resolution;
         this.canvas.width = resolution;
 
+        // Set up the "original" image, in case we don't interact.
+        let original_request = this.makeRequest();
+        let original = this.attributes.getNamedItem("original");
+        if (original) {
+            this.hasOriginal = true;
+            let image = new Image(); // creates an HTMLImageElement!
+            image.src = original.value;
+            image.decode().then(() => {
+                let same = this.requestIsCurrent(original_request);
+                if (same && !this.currentDisplay) {
+                    let xscale = resolution / image.naturalWidth;
+                    let yscale = resolution / image.naturalHeight;
+                    // Nothing already rendered, and we haven't moved.
+                    // Display the image.
+                    this.currentDisplay = original_request;
+                    let context = this.canvas.getContext("2d");
+                    context.scale(xscale, yscale);
+                    context.drawImage(image, 0, 0);
+                }
+            }).catch((err) => {
+                console.log("error displaying default image for", this.name, ": ", err);
+            });
+        }
+
+        // Finally, kick off the WASM worker:
+
+        this.worker = new Worker("./worker.js", { type: "module" });
+        this.worker.addEventListener("message", (msg) => { this.getNewData(msg); });
+
         // Chain of initializations:
         init_done.then(() => { this.wasmInit() });
+    }
+
+    requestIsCurrent(original_request) {
+        let current_want = this.makeRequest();
+        let same = Object.entries(current_want).every(([key, value]) =>
+            original_request[key] === value
+        );
+        return same;
     }
 
     disconnectedCallback() {
@@ -94,6 +136,7 @@ class OverdriveElement extends HTMLElement {
     }
 
     wasmInit() {
+        this.fractal.addEventListener("change", () => { this.updateOptions() });
         this.updateOptions();
         this.shadowRoot.querySelector("form").addEventListener("submit", (e) => {
             e.preventDefault();
@@ -102,8 +145,10 @@ class OverdriveElement extends HTMLElement {
         this.go.disabled = false;
         // We set up the receiving end, from the worker, during connectCallback.
 
-        // Perform an initial re-render:
-        this.worker.postMessage(this.makeRequest());
+        // Only re-render client-side if there's no default.
+        if (!this.hasOriginal) {
+            this.worker.postMessage(this.makeRequest());
+        }
     }
 
     // Construct the request object to send to the WASM worker.
@@ -131,8 +176,15 @@ class OverdriveElement extends HTMLElement {
     }
 
     getNewData(msg) {
+        let { request: original_request, image: image } = msg.data;
+        if (!this.requestIsCurrent(original_request)) {
+            console.log("got stale render response");
+            return;
+        }
+
         let ctx = this.canvas.getContext("2d");
-        ctx.putImageData(msg.data, 0, 0);
+        ctx.putImageData(image, 0, 0);
+        this.currentDisplay = original_request;
     }
 
 }

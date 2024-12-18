@@ -16,7 +16,6 @@
     </head>
     <body>
         <template id="fractal-overdrive-tmpl">
-            <style>@import "fractal-overdrive.css"</style>
             <canvas width="100" height="100"> </canvas>
             <form id="form-rerender" autocomplete="off" class="parameters" action=".">
                 <h2>Target area</h2>
@@ -54,11 +53,13 @@
             resolution="256"
             iterations="128"
             numeric="MaskedFloat<3,50>"
+            original="./duck.webp"
         >
         </fractal-overdrive>
         <fractal-overdrive 
             name="newton-default"
-            fractal="newton"></fractal-overdrive>
+            fractal="newton">
+        </fractal-overdrive>
     </body>
 </html>
 

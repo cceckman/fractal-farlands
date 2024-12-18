@@ -6,25 +6,26 @@ import init, { Request } from './pkg/ff_widget.js';
 // kicked that off.
 const wasm_ready = init();
 
-onmessage = async function(e) {
-    console.log("Worker received message: ", e.data);
+onmessage = async function(msg) {
+    let request = msg.data;
+    console.log("Worker received message: ", request);
 
     // Wait for wasm init to complete before creating a WASM object (Request).
     await wasm_ready;
 
     let req = new Request();
-    req.name = e.data.name;
-    req.x = e.data.x;
-    req.y = e.data.y;
-    req.window = e.data.window;
-    req.scale = e.data.scale;
-    req.iterations = e.data.iterations;
-    req.resolution = e.data.resolution;
-    req.numeric = e.data.numeric;
-    req.fractal = e.data.fractal;
+    req.name = request.name;
+    req.x = request.x;
+    req.y = request.y;
+    req.window = request.window;
+    req.scale = request.scale;
+    req.iterations = request.iterations;
+    req.resolution = request.resolution;
+    req.numeric = request.numeric;
+    req.fractal = request.fractal;
 
     let data = req.render();
-    postMessage(data, [data.data.buffer]);
+    postMessage({ request: request, image: data, }, [data.data.buffer]);
     // postMessage("ok");
 };
 

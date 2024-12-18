@@ -41,6 +41,16 @@ input#down {
     grid-column: 2;
 }
 
+input#out {
+    grid-row: 3;
+    grid-column: 1;
+}
+
+input#in {
+    grid-row: 3;
+    grid-column: 3;
+}
+
 input#left {
     grid-row: 2;
     grid-column: 1;

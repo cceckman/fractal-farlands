@@ -186,6 +186,25 @@ class OverdriveElement extends HTMLElement {
         });
         this.updateOptions();
 
+        this.shadowRoot.querySelector("#out").addEventListener("click", (ev) => {
+            ev.preventDefault();
+            this.syncToDisplay();
+            let window = BigInt(this.windowElement.value);
+            let new_window = window * BigInt(2);
+            this.windowElement.value = new_window;
+            this.render();
+            // TODO: Reduce the fractions!
+        });
+        this.shadowRoot.querySelector("#in").addEventListener("click", (ev) => {
+            ev.preventDefault();
+            this.syncToDisplay();
+            let scale = BigInt(this.scaleElement.value);
+            let new_scale = scale * BigInt(2);
+            this.scaleElement.value = new_scale;
+            this.render();
+            // TODO: Reduce the fractions!
+        });
+
         this.shadowRoot.querySelector("#up").addEventListener("click", (ev) => {
             ev.preventDefault();
             this.syncToDisplay();
@@ -282,9 +301,11 @@ class OverdriveElement extends HTMLElement {
         this.outstandingCount -= 1;
         let { request: original_request, image: image } = msg.data;
         if (!this.requestIsCurrent(original_request) || !image) {
-            console.log("got stale render response");
+            console.log("got stale render response for", this.name);
             return;
         }
+        console.log("got up-to-date response for", this.name);
+
         this.canvasElement.width = original_request.resolution;
         this.canvasElement.height = original_request.resolution;
 

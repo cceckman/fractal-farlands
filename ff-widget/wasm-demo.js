@@ -191,7 +191,7 @@ class OverdriveElement extends HTMLElement {
             this.syncToDisplay();
             let y = parseInt(this.yElement.value);
             let step = parseInt(this.windowElement.value);
-            let new_y = y + (step / 4);
+            let new_y = y + (step);
             if (!isNaN(new_y)) {
                 this.yElement.value = new_y.toString();
                 this.render();
@@ -202,7 +202,7 @@ class OverdriveElement extends HTMLElement {
             this.syncToDisplay();
             let y = parseInt(this.yElement.value);
             let step = parseInt(this.windowElement.value);
-            let new_y = y - (step / 4);
+            let new_y = y - (step);
             if (!isNaN(new_y)) {
                 this.yElement.value = new_y.toString();
                 this.render();
@@ -213,7 +213,7 @@ class OverdriveElement extends HTMLElement {
             this.syncToDisplay();
             let x = parseInt(this.xElement.value);
             let step = parseInt(this.windowElement.value);
-            let new_x = x + (step / 4);
+            let new_x = x + (step);
             if (!isNaN(new_x)) {
                 this.xElement.value = new_x.toString();
                 this.render();
@@ -224,7 +224,7 @@ class OverdriveElement extends HTMLElement {
             this.syncToDisplay();
             let x = parseInt(this.xElement.value);
             let step = parseInt(this.windowElement.value);
-            let new_x = x - (step / 4);
+            let new_x = x - (step);
             if (!isNaN(new_x)) {
                 this.xElement.value = new_x.toString();
                 this.render();
@@ -281,7 +281,7 @@ class OverdriveElement extends HTMLElement {
     getNewData(msg) {
         this.outstandingCount -= 1;
         let { request: original_request, image: image } = msg.data;
-        if (!this.requestIsCurrent(original_request)) {
+        if (!this.requestIsCurrent(original_request) || !image) {
             console.log("got stale render response");
             return;
         }

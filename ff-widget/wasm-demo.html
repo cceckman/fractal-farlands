@@ -10,6 +10,8 @@
         }
         fractal-overdrive {
             max-width: 50%;
+
+            margin: 2em;
         }
         </style>
     </head>
@@ -23,8 +25,8 @@
             <input type="button" id="down" class="direction"  value="&downarrow;"></input>
             <div id="select-inputs">
                 <select id="input-fractal" name="input-fractal" >
-                    <option name="mandelbrot" value="mandelbrot">Mandelbrot</option>
-                    <option name="newton" value="newton">Newton</option>
+                    <option name="mandelbrot" id="mandelbrot" value="mandelbrot">Mandelbrot</option>
+                    <option name="newton" id="newton" value="newton">Newton</option>
                 </select>
                 <select id="input-numeric" name="input-numeric" >
                     <option name="f32" value="f32"></option>
@@ -63,12 +65,8 @@
             original="./duck.webp"
         >
         </fractal-overdrive>
-        <!--
-        <fractal-overdrive 
-            name="newton-default"
-            fractal="newton">
+        <fractal-overdrive name="newton-default" fractal="newton">
         </fractal-overdrive>
--->
     </body>
 </html>
 

@@ -1,9 +1,9 @@
 :host {
     display: block grid;
     /* 3 columns: left control, display, right control */
-    grid-template-columns: repeat(3, min-content);
+    grid-template-columns: repeat(3, n-content);
     /* 5 rows: up control, display, down control, coordinates, meta controls */
-    grid-template-rows: repeat(7, min-content);
+    grid-template-rows: repeat(7, max-content);
 
     font-family: monospace;
 }

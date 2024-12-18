@@ -63,16 +63,16 @@ class OverdriveElement extends HTMLElement {
         this.iterationsElement.value = this.attributes.getNamedItem("iterations")?.value ?? 16;
 
         const fractal = this.attributes.getNamedItem("fractal")?.value ?? "mandelbrot";
-        this.fractalElement.selected = fractal;
-        const numeric = this.attributes.getNamedItem("numeric")?.value ?? "f32";
+        this.fractalElement.value = fractal;
         // Insert this option before we load the actual options:
         {
+            const numeric = this.attributes.getNamedItem("numeric")?.value ?? "f32";
             let el = document.createElement("option");
             el.value = numeric;
             el.text = numeric;
             el.id = numeric;
             this.numericElement.add(el);
-            this.numericElement.selected = numeric;
+            this.numericElement.value = numeric;
         }
         // We have to defer "the actual options" until we've instantiated the WASM module locally.
         this.canvasElement.height = resolution;
@@ -80,7 +80,11 @@ class OverdriveElement extends HTMLElement {
     }
 
     connectedCallback() {
-        console.log("connected")
+        console.log("connected");
+
+        for (const input of this.querySelectorAll("input")) {
+            input.disabled = true;
+        }
 
         const name = this.attributes.getNamedItem("name")?.value;
         if (name) {
@@ -155,6 +159,14 @@ class OverdriveElement extends HTMLElement {
         this.worker = null;
     }
 
+    // Sync back the "last-rendered" to the view fields.
+    syncToDisplay() {
+        if (!this.currentDisplay) {
+            return;
+        }
+        // TODO
+    }
+
     wasmInit() {
         this.fractalElement.addEventListener("change", () => {
             this.updateOptions();
@@ -164,6 +176,51 @@ class OverdriveElement extends HTMLElement {
             this.updateStatus();
         });
         this.updateOptions();
+
+        this.shadowRoot.querySelector("#up").addEventListener("click", (ev) => {
+            ev.preventDefault();
+            this.syncToDisplay();
+            let y = parseInt(this.yElement.value);
+            let step = parseInt(this.windowElement.value);
+            let new_y = y + (step / 4);
+            if (!isNaN(new_y)) {
+                this.yElement.value = new_y.toString();
+                this.render();
+            }
+        });
+        this.shadowRoot.querySelector("#down").addEventListener("click", (ev) => {
+            ev.preventDefault();
+            this.syncToDisplay();
+            let y = parseInt(this.yElement.value);
+            let step = parseInt(this.windowElement.value);
+            let new_y = y - (step / 4);
+            if (!isNaN(new_y)) {
+                this.yElement.value = new_y.toString();
+                this.render();
+            }
+        });
+        this.shadowRoot.querySelector("#right").addEventListener("click", (ev) => {
+            ev.preventDefault();
+            this.syncToDisplay();
+            let x = parseInt(this.xElement.value);
+            let step = parseInt(this.windowElement.value);
+            let new_x = x + (step / 4);
+            if (!isNaN(new_x)) {
+                this.xElement.value = new_x.toString();
+                this.render();
+            }
+        });
+        this.shadowRoot.querySelector("#left").addEventListener("click", (ev) => {
+            ev.preventDefault();
+            this.syncToDisplay();
+            let x = parseInt(this.xElement.value);
+            let step = parseInt(this.windowElement.value);
+            let new_x = x - (step / 4);
+            if (!isNaN(new_x)) {
+                this.xElement.value = new_x.toString();
+                this.render();
+            }
+        });
 
         this.shadowRoot.querySelector("#reset")
             .addEventListener("click", (ev) => {
@@ -177,9 +234,13 @@ class OverdriveElement extends HTMLElement {
                 this.render();
             });
 
+        for (const input of this.querySelectorAll("input")) {
+            input.disabled = false;
+        }
+
         // Only re-render client-side if there's no default.
         if (!this.hasOriginal) {
-            this.worker.postMessage(this.makeRequest());
+            this.render();
         }
     }
 

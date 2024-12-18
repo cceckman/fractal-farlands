@@ -43,7 +43,7 @@ pub struct Request {
     #[wasm_bindgen(getter_with_clone)]
     pub y: String,
     #[wasm_bindgen(getter_with_clone)]
-    pub window: String,
+    pub halfWindow: String,
     #[wasm_bindgen(getter_with_clone)]
     pub scale: String,
     #[wasm_bindgen(getter_with_clone)]
@@ -112,16 +112,15 @@ pub fn numeric_options(fractal: &str) -> Vec<String> {
 impl Request {
     /// Extract the common parameters from the
     fn common_params(&self) -> Result<(CommonParams, usize), Error> {
-        let [x, y, window, scale]: [Result<num::BigInt, _>; 4] =
-            [&self.x, &self.y, &self.window, &self.scale].map(|v| v.parse());
-        let [x, y, window, scale] = [x?, y?, window?, scale?];
+        let [x, y, half_window, scale]: [Result<num::BigInt, _>; 4] =
+            [&self.x, &self.y, &self.halfWindow, &self.scale].map(|v| v.parse());
+        let [x, y, half_window, scale] = [x?, y?, half_window?, scale?];
         // Invert the Y axis, to go from "screen dimensions" to "coordinate dimensions".
         let y = -y;
 
-        let half_range = window / 2;
         let range = |v: BigInt| {
-            let start = BigRational::new(&v - &half_range, scale.clone());
-            let end = BigRational::new(v + &half_range, scale.clone());
+            let start = BigRational::new(&v - &half_window, scale.clone());
+            let end = BigRational::new(v + &half_window, scale.clone());
             start..end
         };
         let size: usize = self.resolution.parse()?;

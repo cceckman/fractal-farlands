@@ -10,42 +10,44 @@
         }
         fractal-overdrive {
             max-width: 50%;
-            display: block;
         }
         </style>
     </head>
     <body>
         <template id="fractal-overdrive-tmpl">
             <style>@import "./fractal-overdrive-widget.css"</style>
+            <input type="button" id="up" class="direction" value="&uparrow;"></input>
+            <input type="button" id="left" class="direction"  value="&larr;"></input>
             <canvas width="100" height="100"> </canvas>
-            <!--
-            <form id="form-rerender" autocomplete="off" class="parameters" action=".">
+            <input type="button" id="right" class="direction"  value="&rarr;"></input>
+            <input type="button" id="down" class="direction"  value="&downarrow;"></input>
+            <div id="select-inputs">
+                <select id="input-fractal" name="input-fractal" >
+                    <option name="mandelbrot" value="mandelbrot">Mandelbrot</option>
+                    <option name="newton" value="newton">Newton</option>
+                </select>
+                <select id="input-numeric" name="input-numeric" >
+                    <option name="f32" value="f32"></option>
+                </select>
+                <input type="button" id="reset" value="Reset" />
+                <input type="button" id="update" value="Update" />
+                <span id="status" class="loader"></span>
+            </div>
 
-
-                <h2>Target area</h2>
-                <p>
-                    <label>Center X (numerator):</label><input id="input-x" name="x" type="number" > 
-                    <label>Center Y (numerator):</label><input id="input-y" name="y" type="number" > 
-                    <label>Window size (numerator)</label><input id="input-window" name="window" type="number" > 
-                    <label>Scale (denominator):</label><input id="input-scale" name="scale" type="number">
-                </p>
-
-                <h2>Rendering settings</h2>
-                <p>
-                    <label>Resolution (pixels):</label><input id="input-resolution" name="resolution" type="number" > 
-                    <label>Max iterations:</label><input id="input-iterations" name="input-iterations" type="number" >
-                    <label>Numeric format:</label><select id="input-numeric" name="input-numeric" >
-                    </select>
-                    <label>Fractal:</label><select id="input-fractal" name="input-fractal" >
-                        <option name="mandelbrot" value="mandelbrot">Mandelbrot</option>
-                        <option name="newton" value="newton">Newton</option>
-                    </select>
-                    <br>
-
-                    <br>
-                </p>
-                <input id="input-go" text="Go" type="submit" disabled></form>
--->
+            <div id="numerators">
+                ((<input type="text" id="input-x" class="number" ></input>, <input type="text" id="input-y" class="number" ></input>)
+                &PlusMinus;
+                <input type="text" id="input-window" class="number" ></input>))
+            </div>
+            <div id="denominators">
+                &div;
+                <input type="text" id="input-scale" class="number" ></input>
+            </div>
+            <div id="meta-numbers">
+                <input type="text"  id="input-resolution" class="number" name="input-resolution" ></input>
+                <label for="resolution">pixels</label>, 
+                <input type="text"  id="input-iterations" class="number" name="input-iterations" type="number" ></input> <label for="input-iterations">iterations</label>
+            </div>
         </template>
 
         <fractal-overdrive 
@@ -53,18 +55,20 @@
             fractal="mandelbrot"
             x="304924415867450"
             y="115639204659165"
-            window="32134205039616"
+            window="16067102519808"
             scale="803355125990400"
-            resolution="256"
+            resolution="512"
             iterations="128"
             numeric="MaskedFloat<3,50>"
             original="./duck.webp"
         >
         </fractal-overdrive>
+        <!--
         <fractal-overdrive 
             name="newton-default"
             fractal="newton">
         </fractal-overdrive>
+-->
     </body>
 </html>
 

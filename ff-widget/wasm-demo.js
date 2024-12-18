@@ -8,47 +8,75 @@ class OverdriveElement extends HTMLElement {
     constructor() {
         super()
         let template = document.getElementById("fractal-overdrive-tmpl");
-        let templateContent = template.content;
+        let templatevalue = template.content;
         let shadowRoot = this.attachShadow({ mode: "open" });
-        shadowRoot.appendChild(templateContent.cloneNode(true));
+        shadowRoot.appendChild(templatevalue.cloneNode(true));
 
         this.name = `fractal-overdrive ${widget_count}`;
         widget_count++;
         this.worker = null;
 
-        this.x = undefined;
-        this.y = undefined;
-        this.window = undefined;
-        this.scale = undefined;
-        this.iterations = undefined;
-        this.resolution = undefined;
-        this.numeric = undefined;
-        this.fractal = undefined;
-        this.canvas = this.shadowRoot.querySelector("canvas");
+        this.xElement = this.shadowRoot.querySelector("#input-x");
+        this.yElement = this.shadowRoot.querySelector("#input-y");
+        this.windowElement = this.shadowRoot.querySelector("#input-window");
+        this.scaleElement = this.shadowRoot.querySelector("#input-scale");
+        this.iterationsElement = this.shadowRoot.querySelector("#input-iterations");
+        this.resolutionElement = this.shadowRoot.querySelector("#input-resolution");
+        this.numericElement = this.shadowRoot.querySelector("#input-numeric");
+        this.fractalElement = this.shadowRoot.querySelector("#input-fractal");
+
+        this.statusElement = this.shadowRoot.querySelector("#status");
+
+        this.canvasElement = this.shadowRoot.querySelector("canvas");
         this.currentDisplay = null;
         this.hasOriginal = false;
     }
 
     updateOptions() {
-        // TODO: Revise with new inputs
-        return;
-        let opts = numeric_options(this.fractal);
-        let selected = this.numeric;
-        for (let i = this.numeric.length - 1; i >= 0; i--) {
-            this.numeric.remove(i);
+        let opts = numeric_options(this.fractalElement.value);
+        let selected = this.numericElement.value;
+        for (let i = this.numericElement.length - 1; i >= 0; i--) {
+            this.numericElement.remove(i);
         }
         for (const o of opts) {
             let el = document.createElement("option");
             el.value = o;
             el.text = o;
             el.id = o;
-            this.numeric.add(el);
+            this.numericElement.add(el);
         }
-        this.numeric.value = selected;
-        if (!this.numeric.value) {
-            const numeric = this.attributes.getNamedItem("numeric")?.value ?? "f32";
-            this.numeric.value = numeric;
+        this.numericElement.value = selected;
+        if (!this.numericElement.value) {
+            const numericElement = this.attributes.getNamedItem("numeric")?.value ?? "f32";
+            this.numericElement.value = numeric;
         }
+    }
+
+    reset() {
+        // Initialize the data fields from attributes:
+        this.xElement.value = this.attributes.getNamedItem("x")?.value ?? 0;
+        this.yElement.value = this.attributes.getNamedItem("y")?.value ?? 0;
+        this.windowElement.value = this.attributes.getNamedItem("window")?.value ?? 2;
+        this.scaleElement.value = this.attributes.getNamedItem("scale")?.value ?? 1;
+        let resolution = this.attributes.getNamedItem("resolution")?.value ?? 256;
+        this.resolutionElement.value = resolution;
+        this.iterationsElement.value = this.attributes.getNamedItem("iterations")?.value ?? 16;
+
+        const fractal = this.attributes.getNamedItem("fractal")?.value ?? "mandelbrot";
+        this.fractalElement.selected = fractal;
+        const numeric = this.attributes.getNamedItem("numeric")?.value ?? "f32";
+        // Insert this option before we load the actual options:
+        {
+            let el = document.createElement("option");
+            el.value = numeric;
+            el.text = numeric;
+            el.id = numeric;
+            this.numericElement.add(el);
+            this.numericElement.selected = numeric;
+        }
+        // We have to defer "the actual options" until we've instantiated the WASM module locally.
+        this.canvasElement.height = resolution;
+        this.canvasElement.width = resolution;
     }
 
     connectedCallback() {
@@ -58,31 +86,18 @@ class OverdriveElement extends HTMLElement {
         if (name) {
             this.name = name;
         }
+        // Reset the inputs to match the defaults:
+        this.reset();
+        let resolution = parseInt(this.resolutionElement.value);
 
-        // Initialize the data fields from attributes:
-        this.x = this.attributes.getNamedItem("x")?.value ?? 0;
-        this.y = this.attributes.getNamedItem("y")?.value ?? 0;
-        this.window = this.attributes.getNamedItem("window")?.value ?? 4;
-        this.scale = this.attributes.getNamedItem("scale")?.value ?? 1;
-        this.resolution = this.attributes.getNamedItem("resolution")?.value ?? 256;
-        this.iterations = this.attributes.getNamedItem("iterations")?.value ?? 16;
-
-        // TODO: Update "current display" portion of window
-        this.fractal = this.attributes.getNamedItem("fractal")?.value ?? "mandelbrot";
-        this.numeric = this.attributes.getNamedItem("numeric")?.value ?? "f32";
-        /*
-        // Insert this option before we load the actual options:
-        {
-            let el = document.createElement("option");
-            el.value = numeric;
-            el.text = numeric;
-            el.id = numeric;
-            this.numeric.add(el);
-            this.numeric.selected = numeric;
-        }*/
-        // We have to defer "the actual options" until we've instantiated the WASM module locally.
-        this.canvas.height = this.resolution;
-        this.canvas.width = this.resolution;
+        // Resize, now and continuously:
+        for (const el of [this.xElement, this.yElement, this.windowElement, this.scaleElement, this.resolutionElement, this.iterationsElement]) {
+            el.size = el.value.length;
+            el.addEventListener("change", (_ev) => {
+                el.size = el.value.length;
+                this.updateStatus();
+            });
+        }
 
         // Set up the "original" image, in case we don't interact.
         let original_request = this.makeRequest();
@@ -94,14 +109,15 @@ class OverdriveElement extends HTMLElement {
             image.decode().then(() => {
                 let same = this.requestIsCurrent(original_request);
                 if (same && !this.currentDisplay) {
-                    let xscale = this.resolution / image.naturalWidth;
-                    let yscale = this.resolution / image.naturalHeight;
+                    let xscale = resolution / image.naturalWidth;
+                    let yscale = resolution / image.naturalHeight;
                     // Nothing already rendered, and we haven't moved.
                     // Display the image.
                     this.currentDisplay = original_request;
-                    let context = this.canvas.getContext("2d");
+                    let context = this.canvasElement.getContext("2d");
                     context.scale(xscale, yscale);
                     context.drawImage(image, 0, 0);
+                    this.updateStatus();
                 }
             }).catch((err) => {
                 console.log("error displaying default image for", this.name, ": ", err);
@@ -115,6 +131,15 @@ class OverdriveElement extends HTMLElement {
 
         // Chain of initializations:
         init_done.then(() => { this.wasmInit() });
+    }
+
+    updateStatus() {
+        this.statusElement.classList.remove("loader");
+        if (this.requestIsCurrent(this.currentDisplay)) {
+            this.statusElement.innerText = "✓";
+        } else {
+            this.statusElement.innerText = "!";
+        }
     }
 
     requestIsCurrent(original_request) {
@@ -131,15 +156,26 @@ class OverdriveElement extends HTMLElement {
     }
 
     wasmInit() {
-        // TODO: properly render stuff
-        // this.fractal.addEventListener("change", () => { this.updateOptions() });
+        this.fractalElement.addEventListener("change", () => {
+            this.updateOptions();
+            this.updateStatus();
+        });
+        this.numericElement.addEventListener("change", () => {
+            this.updateStatus();
+        });
         this.updateOptions();
-        //this.shadowRoot.querySelector("form").addEventListener("submit", (e) => {
-        //    e.preventDefault();
-        //    this.render();
-        //});
-        // this.go.disabled = false;
-        // We set up the receiving end, from the worker, during connectCallback.
+
+        this.shadowRoot.querySelector("#reset")
+            .addEventListener("click", (ev) => {
+                ev.preventDefault();
+                this.reset();
+                this.render();
+            });
+        this.shadowRoot.querySelector("#update")
+            .addEventListener("click", (ev) => {
+                ev.preventDefault();
+                this.render();
+            });
 
         // Only re-render client-side if there's no default.
         if (!this.hasOriginal) {
@@ -153,21 +189,22 @@ class OverdriveElement extends HTMLElement {
         // https://developer.mozilla.org/en-US/docs/Web/API/Worker/postMessage
         return {
             name: this.name,
-            x: this.x,
-            y: this.y,
-            window: this.window,
-            scale: this.scale,
-            iterations: this.iterations,
-            resolution: this.resolution,
-            numeric: this.numeric,
-            fractal: this.fractal,
+            x: this.xElement.value,
+            y: this.yElement.value,
+            halfWindow: this.windowElement.value,
+            scale: this.scaleElement.value,
+            iterations: this.iterationsElement.value,
+            resolution: this.resolutionElement.value,
+            numeric: this.numericElement.value,
+            fractal: this.fractalElement.value,
         }
     }
 
     // Called on submit, to handle re-rendering.
     render() {
         console.log("starting render of", this.name);
-        // TODO: Add a spinner here!
+        this.statusElement.innerHTML = "";
+        this.statusElement.classList.add("loader");
         this.worker.postMessage(this.makeRequest());
     }
 
@@ -178,9 +215,10 @@ class OverdriveElement extends HTMLElement {
             return;
         }
 
-        let ctx = this.canvas.getContext("2d");
+        let ctx = this.canvasElement.getContext("2d");
         ctx.putImageData(image, 0, 0);
         this.currentDisplay = original_request;
+        this.updateStatus();
     }
 
 }

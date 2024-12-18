@@ -43,7 +43,7 @@ pub struct Request {
     #[wasm_bindgen(getter_with_clone)]
     pub y: String,
     #[wasm_bindgen(getter_with_clone)]
-    pub halfWindow: String,
+    pub half_window: String,
     #[wasm_bindgen(getter_with_clone)]
     pub scale: String,
     #[wasm_bindgen(getter_with_clone)]
@@ -54,6 +54,25 @@ pub struct Request {
     pub numeric: String,
     #[wasm_bindgen(getter_with_clone)]
     pub fractal: String,
+}
+
+/// Attempt to reduce the fraction ((x, y) +- half_window) / scale
+/// by a common factor.
+/// Returns the greatest common divisor between all numbers -- which may be 1.
+#[wasm_bindgen]
+pub fn reduce(x: String, y: String, half_window: String, scale: String) -> String {
+    reduce_rs(x, y, half_window, scale).unwrap_or_else(|e| {
+        log(&format!("error reducing fraction: {e}"));
+        "1".to_owned()
+    })
+}
+
+fn reduce_rs(x: String, y: String, half_window: String, scale: String) -> Result<String, Error> {
+    let [x, y, half_window, scale]: [num::BigInt; 4] =
+        [x.parse()?, y.parse()?, half_window.parse()?, scale.parse()?];
+    use num::Integer;
+    let gcd = x.gcd(&y).gcd(&half_window).gcd(&scale);
+    Ok(gcd.to_string())
 }
 
 #[wasm_bindgen]
@@ -113,7 +132,7 @@ impl Request {
     /// Extract the common parameters from the
     fn common_params(&self) -> Result<(CommonParams, usize), Error> {
         let [x, y, half_window, scale]: [Result<num::BigInt, _>; 4] =
-            [&self.x, &self.y, &self.halfWindow, &self.scale].map(|v| v.parse());
+            [&self.x, &self.y, &self.half_window, &self.scale].map(|v| v.parse());
         let [x, y, half_window, scale] = [x?, y?, half_window?, scale?];
         // Invert the Y axis, to go from "screen dimensions" to "coordinate dimensions".
         let y = -y;

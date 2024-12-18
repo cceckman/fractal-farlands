@@ -29,7 +29,7 @@ async function run_render() {
     req.name = last.name;
     req.x = last.x.toString();
     req.y = last.y.toString();
-    req.halfWindow = last.halfWindow.toString();
+    req.half_window = last.halfWindow.toString();
     req.scale = last.scale.toString();
     req.iterations = last.iterations.toString();
     req.resolution = last.resolution.toString();

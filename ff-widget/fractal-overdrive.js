@@ -1,4 +1,4 @@
-import init, { numeric_options } from './pkg/ff_widget.js';
+import init, { reduce, numeric_options } from './pkg/ff_widget.js';
 
 let init_done = init();
 
@@ -133,7 +133,7 @@ class OverdriveElement extends HTMLElement {
 
         // Finally, kick off the WASM worker:
 
-        this.worker = new Worker("./worker.js", { type: "module" });
+        this.worker = new Worker("./fractal-overdrive-worker.js", { type: "module" });
         this.worker.addEventListener("message", (msg) => { this.getNewData(msg); });
 
         // Chain of initializations:
@@ -173,7 +173,15 @@ class OverdriveElement extends HTMLElement {
         if (!this.currentDisplay) {
             return;
         }
-        // TODO
+        this.xElement.value = this.currentDisplay.x;
+        this.yElement.value = this.currentDisplay.y;
+        this.scaleElement.value = this.currentDisplay.scale;
+        this.windowElement.value = this.currentDisplay.halfWindow;
+        this.resolutionElement.value = this.currentDisplay.resolution;
+        this.iterationsElement.value = this.currentDisplay.iterations;
+        this.numericElement.value = this.currentDisplay.numeric;
+        this.fractalElement.value = this.currentDisplay.fractal;
+        this.reduce();
     }
 
     wasmInit() {
@@ -192,17 +200,24 @@ class OverdriveElement extends HTMLElement {
             let window = BigInt(this.windowElement.value);
             let new_window = window * BigInt(2);
             this.windowElement.value = new_window;
+            this.reduce();
             this.render();
-            // TODO: Reduce the fractions!
         });
         this.shadowRoot.querySelector("#in").addEventListener("click", (ev) => {
             ev.preventDefault();
             this.syncToDisplay();
+            let x = BigInt(this.xElement.value);
+            let y = BigInt(this.yElement.value);
             let scale = BigInt(this.scaleElement.value);
-            let new_scale = scale * BigInt(2);
-            this.scaleElement.value = new_scale;
+            const two = BigInt(2);
+            x *= two;
+            y *= two;
+            scale *= two;
+            this.xElement.value = x;
+            this.yElement.value = y;
+            this.scaleElement.value = scale;
+            this.reduce();
             this.render();
-            // TODO: Reduce the fractions!
         });
 
         this.shadowRoot.querySelector("#up").addEventListener("click", (ev) => {
@@ -293,8 +308,23 @@ class OverdriveElement extends HTMLElement {
     render() {
         console.log("starting render of", this.name);
         this.outstandingCount += 1;
+        // Gray out while loading:
+        let ctx = this.canvasElement.getContext("2d");
+        ctx.fillStyle = "rgba(0.5, 0.5, 0.5, 0.5)";
+        ctx.fillRect(0, 0, this.canvasElement.width, this.canvasElement.height);
         this.updateStatus();
         this.worker.postMessage(this.makeRequest());
+    }
+
+    /// Reduce the fractions, where we can.
+    reduce() {
+        let denom = BigInt(reduce(this.xElement.value, this.yElement.value, this.scaleElement.value, this.windowElement.value));
+
+        for (const el of [this.xElement, this.yElement, this.windowElement, this.scaleElement]) {
+            let v = BigInt(el.value);
+            v /= denom;
+            el.value = v.toString();
+        }
     }
 
     getNewData(msg) {
